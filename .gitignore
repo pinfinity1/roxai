@@ -22,3 +22,8 @@ frontend/build/
 # --- Database & Storage Volumes ---
 postgres_data/
 minio_data/
+
+
+
+# --- Context for AI ---
+repomix-output.xml
