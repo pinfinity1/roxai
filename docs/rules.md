@@ -11,7 +11,7 @@ Roxai is an Enterprise-Grade SaaS Platform. We prioritize durability, scalabilit
 
 ### Frontend
 
-- **Framework:** Next.js 15 (App Router, Src Directory)
+- **Framework:** Next.js 15.5.9 (App Router, Src Directory)
 - **Language:** TypeScript (Strict Mode)
 - **Data Fetching:** TanStack Query (React Query) - _Managed via Orval_
 - **State Management:** Zustand (Client Global), React Query (Server State)
@@ -22,7 +22,7 @@ Roxai is an Enterprise-Grade SaaS Platform. We prioritize durability, scalabilit
 ### Backend
 
 - **Framework:** Python 3.13.11 with FastAPI
-- **Database:** PostgreSQL 17+ (Async Drivers).
+- **Database:** PostgreSQL 17 (Async Drivers).
 - **ORM:** SQLAlchemy 2.0+ (Async).
 - **Validation:** Pydantic V2.
 

@@ -1,0 +1,24 @@
+# --- System ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Secrets & Environment ---
+.env
+.env.*
+!.env.example
+
+# --- Python / Backend ---
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# --- Node / Frontend ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# --- Database & Storage Volumes ---
+postgres_data/
+minio_data/
