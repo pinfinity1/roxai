@@ -1,0 +1,67 @@
+services:
+  # 🗄️ Database: PostgreSQL 17 (Alpine for Performance)
+  postgres:
+    image: postgres:17-alpine
+    container_name: roxai_postgres
+    restart: always
+    shm_size: 1g # 🚀 Performance Boost: Increases shared memory for DB operations
+    env_file:
+      - ./backend/.env # Loads POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB directly
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - roxai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 🗃️ Object Storage: MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: roxai_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    env_file:
+      - ./backend/.env # Loads MINIO_ROOT_USER, MINIO_ROOT_PASSWORD
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - roxai-network
+
+  # ⏱️ Temporal Server (Optimized for Dev)
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: roxai_temporal
+    restart: always
+    # Temporal needs specific mapping of env vars, usually mapped from our .env
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PWD=${POSTGRES_PASSWORD}
+      - POSTGRES_SEEDS=postgres
+    env_file:
+      - ./backend/.env
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - roxai-network
+
+networks:
+  roxai-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
