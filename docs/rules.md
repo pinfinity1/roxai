@@ -1,5 +1,23 @@
 # Project Rules & Technical Constitution for Roxai
 
+## 🚨 MISSION CRITICAL: PRODUCTION LAUNCH
+
+**THIS IS NOT A DRILL. THIS IS NOT A PRACTICE PROJECT.**
+
+Roxai is a commercial product scheduled for public launch in the Iranian market. Every line of code written here directly impacts real users and revenue.
+
+### The "Zero Toy-Code" Policy
+
+We have **ZERO TOLERANCE** for "tutorial-style" code or "make it work for now" solutions.
+
+- **Scalability First:** If your code cannot theoretically handle 10,000 concurrent users, it is rejected.
+- **Performance is a Feature:**
+  - Backend API Latency > **200ms** is considered a **BUG**.
+  - Frontend First Contentful Paint > **1.5s** is considered a **BUG**.
+- **Security:** No "we'll fix auth later". Production-grade security (Rate Limiting, input sanitization) is required from Day 1.
+
+---
+
 ## 🧠 Mindset: "Best-in-Class" & "Evergreen"
 
 Roxai is an Enterprise-Grade SaaS Platform. We prioritize durability, scalability, and modern standards.

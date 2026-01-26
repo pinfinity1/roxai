@@ -1,0 +1,12 @@
+from typing import Protocol, Optional
+from backend.src.domain.entities.user import User
+
+class IUserRepository(Protocol):
+    async def get_by_email(self, email: str) -> Optional[User]:
+        ...
+    
+    async def get_by_mobile(self, mobile: str) -> Optional[User]:
+        ...
+
+    async def create(self, user: User) -> User:
+        ...

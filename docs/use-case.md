@@ -92,31 +92,34 @@
 
 ---
 
-### UC-04: Interactive Slide Editor & Export Engine
+### UC-04: Fluid Block Editor & AI Canvas
 
-- FeatureName: Interactive Slide Editor & Export Engine
-- ProductContext: Enterprise-Grade AI PowerPoint Generator (SaaS)
-- Description: A specialized "Structured Editor" allowing users to refine AI-generated content. It separates the "View/Edit" logic from the "Export" logic to enforce monetization strategies securely.
-- TargetUsers: Free User, Pro User.
-- MainUseCases:
-  1. **Editor Layout:** Split-pane view (Thumbnails + Active Slide) with RTL support.
-  2. **Content Manipulation:** Block-based editing of text and replacement of media assets.
-  3. **Regeneration:** Context-aware "Regenerate" actions for specific images or text blocks.
-  4. **Global Styling:** Applying system-wide design tokens (Themes/Fonts) instantly.
-  5. **Export & Sharing (The Paywall):**
-     - **Free Tier:** Access restricted to a read-only, public web viewer URL. Download endpoints are protected.
-     - **Pro Tier:** Access to high-fidelity export generation (Native PPTX with embedded assets).
-- TechStack:
-  - Frontend: Next.js 15, TipTap (Headless Rich Text), Fabric.js (Canvas rendering if needed).
-  - Backend: python-pptx (XML Manipulation), MinIO.
-- Constraints:
-  - **Security:** Export endpoints must verify subscription status via Middleware (RBAC).
-  - **Fidelity:** The Web Viewer CSS must strictly match the output PPTX styles (1:1 visual parity).
-- EdgeCases:
-  - **Subscription Expiry:** Logic to determine if previously generated links remain accessible after a Pro user downgrades.
-- NonFunctionalNeeds:
-  - **Performance:** Text inputs must be "Lag-free" (Optimistic State).
-  - **SEO:** Publicly shared presentation links (Free tier) must be indexable (Server-Side Rendered metadata).
+- **FeatureName:** Fluid Block Editor & AI Canvas (Content-First Engine)
+- **ProductContext:** Enterprise-Grade AI Presentation Platform
+- **Description:** A state-of-the-art "Doc-like" editing interface that decouples content creation from slide pagination. It utilizes a modular "Block Architecture" (similar to Notion/Gamma) where content flows dynamically across "Cards" rather than fixed-geometry slides. This ensures semantic consistency and enables high-quality multi-format exports (Web, PPTX, PDF).
+- **TargetUsers:** Free User (Web View), Pro User (Full Export).
+- **MainUseCases:**
+  1.  **Canvas Interaction:** User edits content in a continuous, vertical-scroll "Canvas". Content overflow triggers automatic card splitting (Smart Pagination) rather than resizing fonts.
+  2.  **Block Operations:** User utilizes slash-commands (`/`) to insert modular blocks (Heading, Text, Image, Code, Embed). Blocks allow drag-and-drop reordering via `dnd-kit`.
+  3.  **Context-Aware AI Copilot:** User selects a block to trigger the "AI Float Menu" for localized operations: Rephrase, Summarize, Expand, or "Visualize this text" (Text-to-Image).
+  4.  **Layout Engine:** User toggles between preset column layouts (1-col, 2-col, 3-col). The system automatically reflows child blocks into the new container structure.
+  5.  **Smart Export Pipeline:**
+      - **Web Viewer (Primary):** Rendering the JSONB state as a responsive Next.js page (SSR).
+      - **Native Export (Secondary):** Mapping the Block Tree to `python-pptx` shapes for offline fidelity.
+- **TechStack:**
+  - **Frontend:** Next.js 15, Tiptap (Headless ProseMirror wrapper for block logic), Zustand (Local Draft State).
+  - **Backend:** FastAPI, Pydantic (Strict Schema Validation for Blocks), PostgreSQL (JSONB).
+- **Constraints:**
+  - **Data Integrity:** The Editor State must be the "Single Source of Truth". Export formats are merely derivatives.
+  - **Mobile Compatibility:** The Editor must disable complex drag-operations on mobile, enforcing a "Content Review/Minor Edit" mode.
+- **EdgeCases:**
+  - **Layout Collapse:** Handling 3-column layouts when exported to a vertical mobile view (Must stack sequentially).
+  - **Media Resolution:** Automatically downscaling 4K user uploads for performance while keeping originals for high-quality export.
+- **NonFunctionalNeeds:**
+  - **Interaction Latency:** Typing and block insertion must feel instant (< 50ms) using Optimistic UI updates.
+  - **Auto-Save Reliability:** State changes must be debounced (e.g., 2s) and synced to the backend with a retry mechanism (Idempotency).
+  - **Concurrent Safety:** Implement "Last-Write-Wins" or basic locking at the Card level to prevent overwrite race conditions if multiple tabs are open.
+- **Dependencies:** AI Service (LLM Wrappers), Object Storage (MinIO for media assets), Auth System (RBAC).
 
 ---
 

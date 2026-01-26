@@ -11,6 +11,22 @@ The interface should be clean, distraction-free, and content-first. The AI compl
 
 ---
 
+## 🎨 Smart Theming System (The "Remix" Engine)
+
+Unlike traditional tools, users do not manually pick colors for every element. They select a **"Theme Preset"**.
+
+### The "One-Click Remix" Philosophy
+
+Every Theme Preset is a JSON object containing:
+
+- **Base Fonts:** (Header & Body pair)
+- **Color Palette:** (Background, Text, Accent, Surface)
+- **Card Style:** (Border radius, Shadow depth, Glassmorphism)
+
+## **Rule:** When a user clicks a new Theme, the entire UI (Editor & Viewer) must update instantly via CSS Variables, without a page reload.
+
+---
+
 ## 🔤 Typography (Strict)
 
 We use a dual-font stack to ensure perfect rendering for both Persian (Farsi) and English.
@@ -119,9 +135,15 @@ We use the standard **Shadcn "Blue"** base layer. This conveys trust, stability,
 - **Data Display:** Complex tables must transform into Stacked Cards or simplified lists on small screens.
 - **Modals:** Center-aligned modals should transform into Bottom Sheets (Drawers) on mobile for better ergonomics.
 
-### 4. Feature Constraints
+### 4. Viewer vs. Editor Strategy
 
-- **Complex Editors:** Heavy interaction components (like Drag-and-Drop editors) must act as "View Only" or "Read Only" on mobile devices, prompting the user to switch to desktop for full editing capabilities.
+- **The Viewer (Consumption):** MUST be 100% Mobile-Native.
+  - **Reflow Logic:** Multi-column layouts on desktop must stack vertically on mobile (like a modern website).
+  - **Touch:** Swipe navigation between Cards.
+- **The Editor (Creation):**
+  - **Mobile:** "Companion Mode" (Quick text edits, reviewing comments, checking analytics).
+  - **Desktop:** Full "Canvas Mode" (Heavy layout changes, AI generation).
+  - _Reasoning:_ Complex block manipulation is frustrating on small screens; guide users to desktop for deep work.
 
 ---
 

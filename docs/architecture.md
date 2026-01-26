@@ -11,12 +11,11 @@ We decouple the "Request" (User clicking button) from the "Execution" (AI genera
 2. **API (FastAPI):** Validates input -> Starts a **Temporal Workflow** -> Returns `workflow_id` immediately.
 3. **Orchestrator (Temporal Server):** Queues the workflow steps.
 4. **Worker (Python):** Picks up tasks (Activities):
-
-- _Activity 1:_ Generate Outline (LLM).
-- _Activity 2:_ Generate Images (DALL-E/Stable Diffusion).
-- _Activity 3:_ Build PPTX (python-pptx).
-- _Activity 4:_ Upload to MinIO.
-
+   - _Activity 1:_ Generate Outline (LLM).
+   - _Activity 2:_ Generate Content Blocks (LLM - JSON Format).
+   - _Activity 3:_ Fetch/Generate Assets.
+   - _Activity 4:_ Structure Assembly (Save as JSONB in DB).
+   - _Activity 5:_ (On-Demand Only) Export to PPTX/PDF.
 5. **Client:** Polls (via React Query) or receives SSE/Webhook when status changes.
 
 ---
@@ -136,13 +135,16 @@ For any entity that goes through a lifecycle .
 - **Indexing:** Must index the `status` column for fast filtering.
 - **Audit:** Must allow linking to an external orchestration ID.
 
-#### Pattern B: The Hybrid Document (JSONB)
+#### Pattern B: The Hybrid Document (JSONB) - **CORE ARCHITECTURE**
 
-For entities with variable structure or rapidly changing fields.
+For the presentation content itself (The "Gamma" Model).
+We do NOT store slides as binary files. We store them as a structured Tree of Blocks.
 
 - **Requirement:** Use **JSONB** column types.
-- **Rule:** Do not create separate tables for Key-Value pairs. Store them in a `meta` or `content` JSONB column.
-- **Indexing:** Use **GIN Indexes** on the JSONB column if searching within keys is required.
+- **Structure:**
+  - `cards`: Array of objects (representing "slides" or "sections").
+  - `blocks`: Within each card, an array of content blocks (Heading, Text, Image, Embed, Code).
+- **Benefit:** Allows for "Reflowable" design (mobile compatibility) and instant AI-regeneration of specific blocks without rebuilding a file.
 
 #### Pattern C: The Asset Reference
 
