@@ -12,15 +12,15 @@ psycopg2-binary>=2.9.9  # برای استفاده احتمالی Alembic (مای
 redis>=5.0.1
 
 # Authentication & Security
-passlib[argon2]>=1.7.4
+pwdlib[argon2]>=0.2.0
 python-jose[cryptography]>=3.3.0
 python-dotenv>=1.0.1
 pydantic[email]>=2.6.0
 pydantic-settings>=2.2.1
 
-# Google OAuth (Added for "Login with Google")
+# Google OAuth
 google-auth>=2.28.0
 requests>=2.31.0
 
-
+# Utils
 greenlet>=3.0.0

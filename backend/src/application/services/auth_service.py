@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import HTTPException, status
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from jose import jwt
 
 # Google Auth Libraries
@@ -30,8 +30,7 @@ class AuthService:
     def __init__(self, user_repo: IUserRepository, redis_client: RedisClient):
         self.user_repo = user_repo
         self.redis = redis_client
-        # ✅ مقداردهی کانتکست پسورد در داخل کلاس
-        self.pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+        self.pwd_context = PasswordHash.recommended()
 
     async def identify_user(self, data: IdentifyRequest) -> IdentifyResponse:
         identifier = data.identifier

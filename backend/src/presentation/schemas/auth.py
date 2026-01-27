@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, EmailStr 
 from typing import Optional, Literal
 import re
 import uuid  # ✅ این خط اضافه شد
@@ -9,7 +9,8 @@ IR_MOBILE_REGEX = r"^(?:\+98|0)?9\d{9}$"
 class IdentifyRequest(BaseModel):
     identifier: str = Field(..., description="Email or Iranian Mobile Number")
 
-    @validator("identifier")
+    @field_validator("identifier")
+    @classmethod
     def validate_identifier(cls, v):
         is_email = "@" in v
         is_mobile = re.match(IR_MOBILE_REGEX, v)
