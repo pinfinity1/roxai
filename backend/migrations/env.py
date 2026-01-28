@@ -1,0 +1,79 @@
+import asyncio
+from logging.config import fileConfig
+import os
+import sys
+from dotenv import load_dotenv
+
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from alembic import context
+
+# 1. تنظیم مسیر پروژه (برای رفع خطای ModuleNotFoundError)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+project_root = os.path.dirname(backend_dir)
+sys.path.insert(0, project_root)
+
+# 2. لود کردن متغیرهای محیطی
+load_dotenv(os.path.join(backend_dir, ".env"))
+
+# 3. ایمپورت کردن مدل‌ها
+from backend.src.infrastructure.db.models.base import Base
+from backend.src.infrastructure.db.models.user import UserModel  # noqa
+
+# 4. ساخت هوشمند URL دیتابیس (رفع مشکل ${} در فایل .env)
+# ما مقادیر خام را می‌خوانیم و خودمان URL را می‌سازیم
+user = os.getenv("POSTGRES_USER", "postgres")
+password = os.getenv("POSTGRES_PASSWORD", "postgres")
+db = os.getenv("POSTGRES_DB", "roxai_db")
+host = "localhost" # چون Alembic خارج از داکر اجرا می‌شود، همیشه لوکال‌هاست است
+port = os.getenv("POSTGRES_PORT", "5432")
+
+# ساخت کانکشن استرینگ نهایی
+DB_URL = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+
+# تنظیم کانفیگ Alembic
+config = context.config
+config.set_main_option("sqlalchemy.url", DB_URL)
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+target_metadata = Base.metadata
+
+def run_migrations_offline() -> None:
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+async def run_migrations_online() -> None:
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+
+    await connectable.dispose()
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    asyncio.run(run_migrations_online())

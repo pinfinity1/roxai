@@ -22,7 +22,13 @@ DATABASE_URL = os.getenv(
 )
 
 # 3. ساخت موتور دیتابیس
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,  
+    future=True,
+    pool_size=20,
+    max_overflow=10
+)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

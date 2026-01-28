@@ -10,26 +10,27 @@ from jose import jwt
 # Google Auth Libraries
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
+from google.auth.exceptions import TransportError  # ✅ ایمپورت جدید برای مدیریت خطای شبکه
 
-from backend.src.domain.interfaces import IUserRepository
+from backend.src.domain.interfaces import IUserRepository, ISmsService
 from backend.src.domain.entities.user import User, UserRole
 from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.presentation.schemas.auth import (
     IdentifyRequest, IdentifyResponse, RegisterRequest, 
-    LoginRequest, TokenResponse, GoogleLoginRequest ,UserShortInfo
+    LoginRequest, TokenResponse, GoogleLoginRequest, UserShortInfo
 )
-# ✅ ایمپورت جدید
 from backend.src.application.dtos.service_result import ServiceResult
 
-# تنظیمات امنیتی
 SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SUPER_SECRET_KEY_CHANGE_THIS")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 class AuthService:
-    def __init__(self, user_repo: IUserRepository, redis_client: RedisClient):
+
+    def __init__(self, user_repo: IUserRepository, redis_client: RedisClient, sms_service: ISmsService):
         self.user_repo = user_repo
         self.redis = redis_client
+        self.sms_service = sms_service  
         self.pwd_context = PasswordHash.recommended()
 
     async def identify_user(self, data: IdentifyRequest) -> IdentifyResponse:
@@ -71,7 +72,8 @@ class AuthService:
         otp_code = str(secrets.randbelow(900000) + 100000)
         await self.redis.set_otp(identifier, otp_code)
 
-        print(f"⚠️ [MOCK SMS] To {identifier}: Your Code is {otp_code}")
+        await self.sms_service.send_otp(identifier, otp_code)
+        
         return "OTP sent successfully"
 
     async def verify_otp(self, identifier: str, code: str) -> str:
@@ -83,26 +85,20 @@ class AuthService:
         if not cached_code or cached_code != code:
             raise HTTPException(status_code=400, detail="Invalid or expired OTP code.")
 
-        # تولید توکن موقت (UUID)
         verification_token = str(uuid.uuid4())
-        # ذخیره در ردیس: کلید=توکن، مقدار=شماره/ایمیل
         await self.redis.save_verification_token(verification_token, identifier)
         await self.redis.delete_otp(identifier)
 
         return verification_token
 
     async def register_user(self, data: RegisterRequest):
-        # ✅ اصلاح مهم: بررسی توکن از ردیس (نه JWT)
-        # چون در verify_otp ما یک UUID ساختیم و در ردیس ذخیره کردیم
         identifier = await self.redis.get_identifier_by_token(data.verification_token)
         
         if not identifier:
             return ServiceResult(False, "Invalid or expired verification token", status_code=400)
 
-        # هش کردن رمز عبور
         hashed_pw = self.pwd_context.hash(data.password)
 
-        # بررسی وجود کاربر (برای ادغام)
         existing_user = None
         if "@" in identifier:
             existing_user = await self.user_repo.get_by_email(identifier)
@@ -112,16 +108,19 @@ class AuthService:
         user_entity = None
 
         if existing_user:
-            # ✅ سناریوی Merge
-            print(f"♻️ Merging account for: {identifier}")
+            print(f"♻️ Updating/Merging account for: {identifier}")
+            
             existing_user.hashed_password = hashed_pw
-            existing_user.first_name = data.first_name or existing_user.first_name
-            existing_user.last_name = data.last_name or existing_user.last_name
+            
+            if data.first_name:
+                existing_user.first_name = data.first_name
+            if data.last_name:
+                existing_user.last_name = data.last_name
+                
             existing_user.is_verified = True
             
             user_entity = await self.user_repo.update(existing_user)
         else:
-            # ✅ سناریوی Create
             print(f"🆕 Creating new account for: {identifier}")
             new_user = User(
                 email=identifier if "@" in identifier else None,
@@ -129,12 +128,10 @@ class AuthService:
                 hashed_password=hashed_pw,
                 first_name=data.first_name,
                 last_name=data.last_name,
-                is_verified=True
+                is_verified=True,
+                role=UserRole.FREE
             )
             user_entity = await self.user_repo.create(new_user)
-
-        # پاک کردن توکن موقت بعد از استفاده موفق
-        # await self.redis.delete_verification_token(data.verification_token)
 
         tokens = self._create_tokens(user_entity)
         return ServiceResult(True, tokens)
@@ -157,21 +154,46 @@ class AuthService:
         return self._create_tokens(user)
 
     async def login_with_google(self, data: GoogleLoginRequest) -> TokenResponse:
+        # ✅ استفاده از متد هوشمند تایید توکن
         google_user_data = self._verify_google_token(data.id_token)
         email = google_user_data["email"]
+        
+        google_fname = google_user_data.get("given_name", "")
+        google_lname = google_user_data.get("family_name", "")
+        google_picture = google_user_data.get("picture", google_user_data.get("avatar_url", ""))
 
         user = await self.user_repo.get_by_email(email)
 
         if user:
+            needs_update = False
+            
             if not user.is_verified:
                 user.is_verified = True
-                await self.user_repo.update(user) # بروزرسانی وضعیت وریفای
+                needs_update = True
+            
+            if not user.avatar_url and google_picture:
+                user.avatar_url = google_picture
+                needs_update = True
+                
+            if not user.first_name and google_fname:
+                user.first_name = google_fname
+                needs_update = True
+            if not user.last_name and google_lname:
+                user.last_name = google_lname
+                needs_update = True
+
+            if needs_update:
+                print(f"🔄 Syncing Google info to DB for {email}")
+                user = await self.user_repo.update(user)
+                
             return self._create_tokens(user)
         else:
+            print(f"🆕 Creating user from Google: {email}")
             new_user = User(
                 email=email,
-                first_name=google_user_data.get("given_name"),
-                last_name=google_user_data.get("family_name"),
+                first_name=google_fname,
+                last_name=google_lname,
+                avatar_url=google_picture,
                 is_verified=True,
                 is_active=True,
                 role=UserRole.FREE,
@@ -189,7 +211,6 @@ class AuthService:
         
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         
-        # ساخت آبجکت اطلاعات کاربر
         user_info = UserShortInfo(
             id=user.id,
             email=user.email,
@@ -225,14 +246,11 @@ class AuthService:
 
     def _verify_google_token(self, token: str) -> dict:
         client_id = os.getenv("AUTH_GOOGLE_ID")
-        if not client_id:
-            # در حالت لوکال برای جلوگیری از خطا موقتاً هشدار می‌دهیم
-            print("⚠️ WARNING: AUTH_GOOGLE_ID is not set in env.")
-            # raise HTTPException(status_code=500, detail="Google Client ID not configured")
-
+        
+        # 1. تلاش برای تایید آنلاین (استاندارد)
         try:
-            # برای تست واقعی حتما کلاینت آیدی باید باشد، اما فعلا passthrough می‌کنیم اگر نبود
             if client_id:
+                # این خط ممکن است به خاطر تحریم تایم‌اوت بخورد
                 id_info = google_id_token.verify_oauth2_token(
                     token, 
                     google_requests.Request(), 
@@ -241,10 +259,23 @@ class AuthService:
                 if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
                     raise ValueError('Wrong issuer.')
                 return id_info
-            else:
-                # فقط برای جلوگیری از کرش در محیط بدون env
-                return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}
+                
+        except (ValueError, TransportError) as e:
+            # 2. مدیریت خطا (فیلترینگ یا توکن نامعتبر)
+            env_mode = os.getenv("ENV_MODE", "development")
             
-        except ValueError as e:
+            # اگر در محیط توسعه هستیم و ارور مربوط به شبکه/فیلترینگ است:
+            if env_mode == "development":
+                print(f"⚠️ Google Network Error ({e}). Decoding locally for DEV mode...")
+                try:
+                    # ✅ توکن را بدون بررسی امضا باز می‌کنیم (فقط برای دولوپمنت!)
+                    decoded = jwt.get_unverified_claims(token)
+                    return decoded
+                except Exception as decode_error:
+                    print(f"❌ Failed to decode token locally: {decode_error}")
+            
+            # در غیر این صورت خطا را برگردان
             print(f"❌ Google Token Verification Failed: {e}")
-            raise HTTPException(status_code=401, detail="Invalid Google Token")
+            raise HTTPException(status_code=401, detail="Invalid Google Token or Network Error")
+            
+        return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}

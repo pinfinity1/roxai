@@ -10,3 +10,7 @@ class IUserRepository(Protocol):
 
     async def create(self, user: User) -> User:
         ...
+
+class ISmsService(Protocol):
+    async def send_otp(self, mobile: str, code: str) -> bool:
+        ...      

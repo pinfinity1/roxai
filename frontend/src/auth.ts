@@ -6,6 +6,11 @@ import { loginUser, loginWithGoogle } from "@/lib/api/auth/auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  pages: {
+    signIn: "/login",
+    error: "/login/error",
+  },
+
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
@@ -33,7 +38,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: credentials.password as string,
           });
 
-          // ✅ تغییر ۱: دریافت آبجکت user از پاسخ بک‌اند
           const { access_token, role, user } = response.data;
 
           if (access_token && user) {
@@ -41,7 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               id: user.id,
               name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
               email: user.email,
-              image: user.avatar_url, // آواتار
+              image: user.avatar_url,
               accessToken: access_token,
               role: role,
             };
@@ -56,11 +60,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // این بخش فقط در لحظه لاگین اجرا می‌شود
       if (user) {
         token.accessToken = user.accessToken;
         token.role = user.role;
-        // ✅ تغییر ۲: ذخیره نام و عکس در توکن
         token.name = user.name;
         token.picture = user.image;
       }
@@ -72,9 +74,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           // در لاگین گوگل هم باید اطلاعات کاربر را بگیریم (اگر بک‌اند بفرستد)
           // فعلاً فقط توکن و نقش را آپدیت می‌کنیم
-          const { access_token, role } = response.data;
+          const { access_token, role, user } = response.data;
           token.accessToken = access_token;
           token.role = role;
+          if (user && user.avatar_url) {
+            token.picture = user.avatar_url;
+            token.name = `${user.first_name} ${user.last_name}`;
+          }
         } catch (error) {
           console.error("Google Sync Failed", error);
         }
@@ -84,7 +90,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token.accessToken) {
         session.accessToken = token.accessToken as string;
-        // ✅ تغییر ۳: انتقال اطلاعات به سشن نهایی
         session.user.role = token.role as string;
         session.user.name = token.name;
         session.user.image = token.picture;

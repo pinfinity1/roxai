@@ -8,6 +8,9 @@ sqlalchemy>=2.0.25
 asyncpg>=0.29.0  # درایور Async برای Postgres
 psycopg2-binary>=2.9.9  # برای استفاده احتمالی Alembic (مایگریشن)
 
+# Migrations
+alembic>=1.13.1
+
 # Redis
 redis>=5.0.1
 
