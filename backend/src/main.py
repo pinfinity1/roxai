@@ -17,6 +17,7 @@ from backend.src.infrastructure.db.models import Base
 from backend.src.infrastructure.db.models.user import UserModel 
 from backend.src.infrastructure.repositories.postgres_user_repo import PostgresUserRepository
 from backend.src.infrastructure.external.sms import ConsoleSmsService, RemoteSmsService
+from backend.src.infrastructure.external.email import ConsoleEmailService, SmtpEmailService
 
 # --- Global State ---
 redis_client: Optional[RedisClient] = None
@@ -45,8 +46,8 @@ async def lifespan(app: FastAPI):
 # --- Dependency Injection Implementation ---
 async def get_auth_service_impl(db: AsyncSession = Depends(get_db)):
     """
-    این تابع جایگزین `get_auth_service` در کنترلرها می‌شود.
-    وظیفه آن ساخت سرویس با دیتابیس، ردیس و سرویس پیامک واقعی/تست است.
+    This function replaces `get_auth_service` in controllers.
+    It constructs the service with DB, Redis, and real/test SMS & Email services.
     """
     if redis_client is None:
         raise RuntimeError("Redis client is not initialized")
@@ -57,19 +58,22 @@ async def get_auth_service_impl(db: AsyncSession = Depends(get_db)):
     env_mode = os.getenv("ENV_MODE", "development")
     
     if env_mode == "production":
-        # دریافت کلید API از محیط
         api_key = os.getenv("SMS_PROVIDER_API_KEY", "")
-        # استفاده از سرویس واقعی (ولی فعلا با پیاده‌سازی جنریک)
         sms_service = RemoteSmsService(api_key=api_key)
     else:
-        # استفاده از سرویس کنسول برای دولوپمنت
         sms_service = ConsoleSmsService()
+
+    if env_mode == "production":
+        email_service = SmtpEmailService()
+    else:
+        email_service = ConsoleEmailService()
     
-    # تزریق وابستگی‌ها به AuthService
+
     return AuthService(
         user_repo=real_user_repo, 
         redis_client=redis_client,
-        sms_service=sms_service  # ✅ سرویس انتخاب شده پاس داده می‌شود
+        sms_service=sms_service,
+        email_service=email_service 
     )
 
 # --- App Setup ---

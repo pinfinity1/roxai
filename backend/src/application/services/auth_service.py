@@ -10,9 +10,10 @@ from jose import jwt
 # Google Auth Libraries
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
-from google.auth.exceptions import TransportError  # ✅ ایمپورت جدید برای مدیریت خطای شبکه
+from google.auth.exceptions import TransportError
 
-from backend.src.domain.interfaces import IUserRepository, ISmsService
+
+from backend.src.domain.interfaces import IUserRepository, ISmsService, IEmailService
 from backend.src.domain.entities.user import User, UserRole
 from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.presentation.schemas.auth import (
@@ -27,10 +28,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 class AuthService:
 
-    def __init__(self, user_repo: IUserRepository, redis_client: RedisClient, sms_service: ISmsService):
+    def __init__(
+        self, 
+        user_repo: IUserRepository, 
+        redis_client: RedisClient, 
+        sms_service: ISmsService,
+        email_service: IEmailService
+    ):
         self.user_repo = user_repo
         self.redis = redis_client
-        self.sms_service = sms_service  
+        self.sms_service = sms_service
+        self.email_service = email_service
         self.pwd_context = PasswordHash.recommended()
 
     async def identify_user(self, data: IdentifyRequest) -> IdentifyResponse:
@@ -59,7 +67,9 @@ class AuthService:
         )
 
     async def send_otp(self, identifier: str) -> str:
-        if "@" not in identifier:
+        is_email = "@" in identifier
+        
+        if not is_email:
             identifier = self._normalize_mobile(identifier)
 
         is_allowed = await self.redis.check_rate_limit(identifier)
@@ -72,7 +82,11 @@ class AuthService:
         otp_code = str(secrets.randbelow(900000) + 100000)
         await self.redis.set_otp(identifier, otp_code)
 
-        await self.sms_service.send_otp(identifier, otp_code)
+        # ✅ Routing Strategy: Send via Email or SMS based on type
+        if is_email:
+            await self.email_service.send_otp(identifier, otp_code)
+        else:
+            await self.sms_service.send_otp(identifier, otp_code)
         
         return "OTP sent successfully"
 
@@ -154,7 +168,6 @@ class AuthService:
         return self._create_tokens(user)
 
     async def login_with_google(self, data: GoogleLoginRequest) -> TokenResponse:
-        # ✅ استفاده از متد هوشمند تایید توکن
         google_user_data = self._verify_google_token(data.id_token)
         email = google_user_data["email"]
         
@@ -246,11 +259,8 @@ class AuthService:
 
     def _verify_google_token(self, token: str) -> dict:
         client_id = os.getenv("AUTH_GOOGLE_ID")
-        
-        # 1. تلاش برای تایید آنلاین (استاندارد)
         try:
             if client_id:
-                # این خط ممکن است به خاطر تحریم تایم‌اوت بخورد
                 id_info = google_id_token.verify_oauth2_token(
                     token, 
                     google_requests.Request(), 
@@ -259,22 +269,16 @@ class AuthService:
                 if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
                     raise ValueError('Wrong issuer.')
                 return id_info
-                
         except (ValueError, TransportError) as e:
-            # 2. مدیریت خطا (فیلترینگ یا توکن نامعتبر)
             env_mode = os.getenv("ENV_MODE", "development")
-            
-            # اگر در محیط توسعه هستیم و ارور مربوط به شبکه/فیلترینگ است:
             if env_mode == "development":
                 print(f"⚠️ Google Network Error ({e}). Decoding locally for DEV mode...")
                 try:
-                    # ✅ توکن را بدون بررسی امضا باز می‌کنیم (فقط برای دولوپمنت!)
                     decoded = jwt.get_unverified_claims(token)
                     return decoded
                 except Exception as decode_error:
                     print(f"❌ Failed to decode token locally: {decode_error}")
             
-            # در غیر این صورت خطا را برگردان
             print(f"❌ Google Token Verification Failed: {e}")
             raise HTTPException(status_code=401, detail="Invalid Google Token or Network Error")
             
