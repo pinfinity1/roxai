@@ -1,15 +1,12 @@
-// frontend/src/features/auth/components/login-form.tsx
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence } from "motion/react";
-import { Card } from "@/components/ui/card";
-
-// استپ‌ها
+import { AnimatePresence, motion } from "motion/react";
 import { StepIdentity } from "./wizard/step-identity";
 import { StepOtp } from "./wizard/step-otp";
 import { StepRegister } from "./wizard/step-register";
 import { StepLoginPassword } from "./wizard/step-login-password";
+import { BrandLogo } from "@/components/ui/brand-logo";
 
 export type AuthStep =
   | "IDENTITY"
@@ -23,21 +20,26 @@ export function LoginForm() {
   const [verificationToken, setVerificationToken] = useState("");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F2F2F7] p-4 font-vazir">
-      {/* رنگ پس‌زمینه: #F2F2F7 (رنگ استاندارد iOS Grouped Background)
-        بدون هیچ افکت اضافه. تمیزی مطلق.
-      */}
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50 font-vazir">
+      {/* 🎨 Background: Luxury Teal Mesh Gradient */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-teal-600/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-800/10 blur-[120px] animate-pulse delay-1000" />
+      </div>
 
-      <div className="w-full max-w-[400px]">
-        {/* لوگوی یا نام برند بالای کارت */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-black tracking-tight text-gray-900">
-            Roxai
-          </h1>
-        </div>
+      <div className="z-10 w-full max-w-[420px] px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center mb-8"
+        >
+          <BrandLogo size="lg" />
+        </motion.div>
 
-        <Card className="overflow-hidden rounded-[24px] border-0 bg-white shadow-sm ring-1 ring-black/5">
-          <div className="p-8">
+        {/* 💎 Glass Card */}
+        <div className="relative overflow-hidden rounded-[32px] bg-white/60 backdrop-blur-2xl shadow-2xl ring-1 ring-white/50 border border-white/20">
+          <div className="relative p-8 md:p-10">
             <AnimatePresence mode="wait" initial={false}>
               {step === "IDENTITY" && (
                 <StepIdentity
@@ -48,7 +50,6 @@ export function LoginForm() {
                   }}
                 />
               )}
-
               {step === "OTP" && (
                 <StepOtp
                   key="otp"
@@ -60,7 +61,6 @@ export function LoginForm() {
                   }}
                 />
               )}
-
               {step === "REGISTER_PASSWORD" && (
                 <StepRegister
                   key="register"
@@ -68,7 +68,6 @@ export function LoginForm() {
                   verificationToken={verificationToken}
                 />
               )}
-
               {step === "LOGIN_PASSWORD" && (
                 <StepLoginPassword
                   key="login-password"
@@ -78,7 +77,18 @@ export function LoginForm() {
               )}
             </AnimatePresence>
           </div>
-        </Card>
+        </div>
+
+        {/* Footer Links */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-400">
+            با ورود به روکسی،{" "}
+            <a href="#" className="underline hover:text-gray-600">
+              قوانین و مقررات
+            </a>{" "}
+            را می‌پذیرید.
+          </p>
+        </div>
       </div>
     </div>
   );

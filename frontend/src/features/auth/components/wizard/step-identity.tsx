@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "motion/react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react"; // ArrowLeft اضافه شد
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 
@@ -39,7 +39,6 @@ export function StepIdentity({
     try {
       const res = await identify({ data: { identifier: values.identifier } });
       const { next_step } = res.data;
-
       if (next_step === "password") {
         onSuccess("LOGIN_PASSWORD", values.identifier);
       } else {
@@ -53,10 +52,11 @@ export function StepIdentity({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-8"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="space-y-6"
     >
       <div className="space-y-2 text-center">
         {/* تیتر کاملاً رسمی و بدون حاشیه */}
@@ -68,7 +68,7 @@ export function StepIdentity({
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 pt-2">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -77,14 +77,18 @@ export function StepIdentity({
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input
-                      {...field}
-                      dir="ltr"
-                      className="h-14 rounded-2xl bg-gray-100 border-0 text-lg text-center px-4 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:bg-white transition-all shadow-inner font-mono"
-                      placeholder="0912..."
-                    />
+                    <div className="relative group">
+                      <Input
+                        {...field}
+                        dir="ltr"
+                        className="h-14 rounded-2xl bg-gray-50/50 border border-gray-200 text-lg text-center px-4 
+                        placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-blue-500/10 
+                        focus-visible:border-blue-500 transition-all duration-300 font-mono shadow-sm
+                        group-hover:bg-white"
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage className="text-center text-xs text-red-600 font-medium" />
+                  <FormMessage className="text-center text-xs text-red-500 font-medium mt-2 bg-red-50 py-1 rounded-md" />
                 </FormItem>
               )}
             />
@@ -92,31 +96,33 @@ export function StepIdentity({
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="w-full h-14 rounded-2xl bg-gray-900 text-white hover:bg-black text-base font-medium shadow-none transition-all active:scale-[0.98]"
+              className="w-full h-14 rounded-2xl bg-gray-900 text-white hover:bg-black 
+              text-base font-semibold shadow-lg shadow-gray-900/20 transition-all 
+              hover:scale-[1.02] active:scale-[0.98]"
             >
               {form.formState.isSubmitting ? (
                 <Loader2 className="animate-spin" />
               ) : (
                 "ادامه"
               )}
+              {!form.formState.isSubmitting && (
+                <ArrowLeft className="mr-2 w-5 h-5 opacity-70" />
+              )}
             </Button>
           </form>
         </Form>
 
-        {/* دیوایدر ساده‌تر */}
-        <div className="relative py-2">
+        <div className="relative py-3">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-100" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-3 text-gray-400 font-medium">یا</span>
+            <span className="w-full border-t border-gray-200/60" />
           </div>
         </div>
 
         <Button
           variant="outline"
           type="button"
-          className="w-full h-14 rounded-2xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors"
+          className="w-full h-14 rounded-2xl border border-gray-200 bg-white/50 text-gray-700 
+          hover:bg-white hover:text-gray-900 hover:border-gray-300 font-medium transition-all duration-300"
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           disabled={isGoogleLoading}
         >
