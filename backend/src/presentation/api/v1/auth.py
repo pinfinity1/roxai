@@ -3,13 +3,11 @@ from backend.src.presentation.schemas.auth import (
     IdentifyRequest, IdentifyResponse, 
     SendOtpRequest, VerifyOtpRequest, VerifyOtpResponse,
     RegisterRequest, LoginRequest, TokenResponse, 
-    GoogleLoginRequest
+    GoogleLoginRequest, RefreshTokenRequest
 )
 from backend.src.application.services.auth_service import AuthService
 
-# Dependency Placeholder
-def get_auth_service():
-    raise NotImplementedError("Dependency not injected")
+from backend.src.presentation.api.dependencies import get_auth_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -58,7 +56,6 @@ async def register_user(
     service: AuthService = Depends(get_auth_service)
 ):
     """ثبت‌نام نهایی و دریافت توکن ورود"""
-    # ✅ اصلاح مهم: دریافت ServiceResult و باز کردن آن
     result = await service.register_user(data)
     
     if not result.success:
@@ -66,8 +63,6 @@ async def register_user(
             status_code=result.status_code, 
             detail=result.message
         )
-    
-    # اگر موفق بود، فقط بخش data (که TokenResponse است) برگردانده می‌شود
     return result.data
 
 @router.post(
@@ -93,3 +88,15 @@ async def login_with_google(
 ):
     """ورود یا ثبت‌نام با حساب گوگل (OAuth)"""
     return await service.login_with_google(data)
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    operation_id="refresh_token"
+)
+async def refresh_token(
+    data: RefreshTokenRequest,
+    service: AuthService = Depends(get_auth_service)
+):
+    """تمدید نشست کاربری با استفاده از رفرش توکن"""
+    return await service.refresh_access_token(data)

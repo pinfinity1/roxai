@@ -40,10 +40,8 @@ class RedisClient:
         ذخیره توکن موقت (Verification Token) که نشان می‌دهد کاربر موبایل/ایمیلش را تایید کرده.
         """
         key = f"roxai:auth:token:{token}"
-        # پارامتر دوم را identifier نامیدم تا مشخص باشد چه چیزی ذخیره می‌شود
         await self.client.set(key, identifier, ex=ttl_seconds)
 
-    # ✅ تغییر نام این متد برای هماهنگی با AuthService
     async def get_identifier_by_token(self, token: str) -> Optional[str]:
         key = f"roxai:auth:token:{token}"
         return await self.client.get(key)
@@ -51,6 +49,33 @@ class RedisClient:
     async def delete_verification_token(self, token: str):
         key = f"roxai:auth:token:{token}"
         await self.client.delete(key)
+
+    async def set_refresh_token(self, token: str, user_id: str, ttl_seconds: int = 604800): # 7 روز
+        """ذخیره رفرش توکن برای کاربر"""
+        key = f"roxai:auth:rt:{token}"
+        await self.client.set(key, user_id, ex=ttl_seconds)
+
+    async def get_user_id_by_refresh_token(self, token: str) -> Optional[str]:
+        """یافتن کاربر صاحب این رفرش توکن"""
+        key = f"roxai:auth:rt:{token}"
+        return await self.client.get(key)
+    
+    async def delete_refresh_token(self, token: str):
+        """حذف رفرش توکن (سوزاندن توکن)"""
+        key = f"roxai:auth:rt:{token}"
+        await self.client.delete(key)
+
+
+    async def add_to_blacklist(self, jti: str, ttl_seconds: int):
+        """اضافه کردن JTI توکن اکسس به لیست سیاه"""
+        key = f"roxai:auth:bl:{jti}"
+        await self.client.set(key, "true", ex=ttl_seconds)
+
+    async def is_token_blacklisted(self, jti: str) -> bool:
+        """چک کردن اینکه آیا توکن در لیست سیاه است یا نه"""
+        key = f"roxai:auth:bl:{jti}"
+        result = await self.client.get(key)
+        return result is not None
 
     async def close(self):
         await self.client.close()

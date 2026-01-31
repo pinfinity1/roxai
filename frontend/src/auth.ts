@@ -38,7 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: credentials.password as string,
           });
 
-          const { access_token, role, user } = response.data;
+          const { access_token, role, user } = response;
 
           if (access_token && user) {
             return {
@@ -74,7 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           // در لاگین گوگل هم باید اطلاعات کاربر را بگیریم (اگر بک‌اند بفرستد)
           // فعلاً فقط توکن و نقش را آپدیت می‌کنیم
-          const { access_token, role, user } = response.data;
+          const { access_token, role, user } = response;
           token.accessToken = access_token;
           token.role = role;
           if (user && user.avatar_url) {

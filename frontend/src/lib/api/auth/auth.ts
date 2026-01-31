@@ -14,13 +14,6 @@ import type {
   UseMutationResult
 } from '@tanstack/react-query';
 
-import axios from 'axios';
-import type {
-  AxiosError,
-  AxiosRequestConfig,
-  AxiosResponse
-} from 'axios';
-
 import type {
   GoogleLoginRequest,
   HTTPValidationError,
@@ -34,7 +27,11 @@ import type {
   VerifyOtpResponse
 } from '.././model';
 
+import { customInstance } from '.././custom-instance';
+import type { ErrorType } from '.././custom-instance';
 
+
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
@@ -42,28 +39,31 @@ import type {
  * @summary Identify User
  */
 export const identifyUser = (
-    identifyRequest: IdentifyRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<IdentifyResponse>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/identify`,
-      identifyRequest,options
-    );
-  }
+    identifyRequest: IdentifyRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<IdentifyResponse>(
+      {url: `/api/v1/auth/identify`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: identifyRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getIdentifyUserMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof identifyUser>>, TError,{data: IdentifyRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getIdentifyUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof identifyUser>>, TError,{data: IdentifyRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof identifyUser>>, TError,{data: IdentifyRequest}, TContext> => {
 
 const mutationKey = ['identifyUser'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -71,7 +71,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof identifyUser>>, {data: IdentifyRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  identifyUser(data,axiosOptions)
+          return  identifyUser(data,requestOptions)
         }
 
         
@@ -81,13 +81,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type IdentifyUserMutationResult = NonNullable<Awaited<ReturnType<typeof identifyUser>>>
     export type IdentifyUserMutationBody = IdentifyRequest
-    export type IdentifyUserMutationError = AxiosError<HTTPValidationError>
+    export type IdentifyUserMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Identify User
  */
-export const useIdentifyUser = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof identifyUser>>, TError,{data: IdentifyRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useIdentifyUser = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof identifyUser>>, TError,{data: IdentifyRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof identifyUser>>,
         TError,
@@ -104,28 +104,31 @@ export const useIdentifyUser = <TError = AxiosError<HTTPValidationError>,
  * @summary Send Otp
  */
 export const sendOtp = (
-    sendOtpRequest: SendOtpRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<unknown>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/otp/send`,
-      sendOtpRequest,options
-    );
-  }
+    sendOtpRequest: SendOtpRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/auth/otp/send`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: sendOtpRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getSendOtpMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOtp>>, TError,{data: SendOtpRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getSendOtpMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOtp>>, TError,{data: SendOtpRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof sendOtp>>, TError,{data: SendOtpRequest}, TContext> => {
 
 const mutationKey = ['sendOtp'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -133,7 +136,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendOtp>>, {data: SendOtpRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  sendOtp(data,axiosOptions)
+          return  sendOtp(data,requestOptions)
         }
 
         
@@ -143,13 +146,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type SendOtpMutationResult = NonNullable<Awaited<ReturnType<typeof sendOtp>>>
     export type SendOtpMutationBody = SendOtpRequest
-    export type SendOtpMutationError = AxiosError<HTTPValidationError>
+    export type SendOtpMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Send Otp
  */
-export const useSendOtp = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOtp>>, TError,{data: SendOtpRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useSendOtp = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendOtp>>, TError,{data: SendOtpRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof sendOtp>>,
         TError,
@@ -166,28 +169,31 @@ export const useSendOtp = <TError = AxiosError<HTTPValidationError>,
  * @summary Verify Otp
  */
 export const verifyOtp = (
-    verifyOtpRequest: VerifyOtpRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<VerifyOtpResponse>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/otp/verify`,
-      verifyOtpRequest,options
-    );
-  }
+    verifyOtpRequest: VerifyOtpRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<VerifyOtpResponse>(
+      {url: `/api/v1/auth/otp/verify`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: verifyOtpRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getVerifyOtpMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError,{data: VerifyOtpRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getVerifyOtpMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError,{data: VerifyOtpRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError,{data: VerifyOtpRequest}, TContext> => {
 
 const mutationKey = ['verifyOtp'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -195,7 +201,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyOtp>>, {data: VerifyOtpRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  verifyOtp(data,axiosOptions)
+          return  verifyOtp(data,requestOptions)
         }
 
         
@@ -205,13 +211,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type VerifyOtpMutationResult = NonNullable<Awaited<ReturnType<typeof verifyOtp>>>
     export type VerifyOtpMutationBody = VerifyOtpRequest
-    export type VerifyOtpMutationError = AxiosError<HTTPValidationError>
+    export type VerifyOtpMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Verify Otp
  */
-export const useVerifyOtp = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError,{data: VerifyOtpRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useVerifyOtp = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyOtp>>, TError,{data: VerifyOtpRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof verifyOtp>>,
         TError,
@@ -228,28 +234,31 @@ export const useVerifyOtp = <TError = AxiosError<HTTPValidationError>,
  * @summary Register User
  */
 export const registerUser = (
-    registerRequest: RegisterRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<TokenResponse>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/register`,
-      registerRequest,options
-    );
-  }
+    registerRequest: RegisterRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<TokenResponse>(
+      {url: `/api/v1/auth/register`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: registerRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getRegisterUserMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerUser>>, TError,{data: RegisterRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getRegisterUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerUser>>, TError,{data: RegisterRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof registerUser>>, TError,{data: RegisterRequest}, TContext> => {
 
 const mutationKey = ['registerUser'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -257,7 +266,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerUser>>, {data: RegisterRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  registerUser(data,axiosOptions)
+          return  registerUser(data,requestOptions)
         }
 
         
@@ -267,13 +276,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type RegisterUserMutationResult = NonNullable<Awaited<ReturnType<typeof registerUser>>>
     export type RegisterUserMutationBody = RegisterRequest
-    export type RegisterUserMutationError = AxiosError<HTTPValidationError>
+    export type RegisterUserMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Register User
  */
-export const useRegisterUser = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerUser>>, TError,{data: RegisterRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useRegisterUser = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerUser>>, TError,{data: RegisterRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof registerUser>>,
         TError,
@@ -290,28 +299,31 @@ export const useRegisterUser = <TError = AxiosError<HTTPValidationError>,
  * @summary Login User
  */
 export const loginUser = (
-    loginRequest: LoginRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<TokenResponse>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/login`,
-      loginRequest,options
-    );
-  }
+    loginRequest: LoginRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<TokenResponse>(
+      {url: `/api/v1/auth/login`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: loginRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getLoginUserMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginUser>>, TError,{data: LoginRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getLoginUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginUser>>, TError,{data: LoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof loginUser>>, TError,{data: LoginRequest}, TContext> => {
 
 const mutationKey = ['loginUser'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -319,7 +331,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginUser>>, {data: LoginRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  loginUser(data,axiosOptions)
+          return  loginUser(data,requestOptions)
         }
 
         
@@ -329,13 +341,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type LoginUserMutationResult = NonNullable<Awaited<ReturnType<typeof loginUser>>>
     export type LoginUserMutationBody = LoginRequest
-    export type LoginUserMutationError = AxiosError<HTTPValidationError>
+    export type LoginUserMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Login User
  */
-export const useLoginUser = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginUser>>, TError,{data: LoginRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useLoginUser = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginUser>>, TError,{data: LoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof loginUser>>,
         TError,
@@ -352,28 +364,31 @@ export const useLoginUser = <TError = AxiosError<HTTPValidationError>,
  * @summary Login With Google
  */
 export const loginWithGoogle = (
-    googleLoginRequest: GoogleLoginRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<TokenResponse>> => {
-    
-    
-    return axios.post(
-      `http://127.0.0.1:8000/api/v1/auth/google`,
-      googleLoginRequest,options
-    );
-  }
+    googleLoginRequest: GoogleLoginRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<TokenResponse>(
+      {url: `/api/v1/auth/google`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: googleLoginRequest, signal
+    },
+      options);
+    }
+  
 
 
-
-export const getLoginWithGoogleMutationOptions = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWithGoogle>>, TError,{data: GoogleLoginRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getLoginWithGoogleMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWithGoogle>>, TError,{data: GoogleLoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof loginWithGoogle>>, TError,{data: GoogleLoginRequest}, TContext> => {
 
 const mutationKey = ['loginWithGoogle'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }, request: undefined};
 
       
 
@@ -381,7 +396,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginWithGoogle>>, {data: GoogleLoginRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  loginWithGoogle(data,axiosOptions)
+          return  loginWithGoogle(data,requestOptions)
         }
 
         
@@ -391,13 +406,13 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type LoginWithGoogleMutationResult = NonNullable<Awaited<ReturnType<typeof loginWithGoogle>>>
     export type LoginWithGoogleMutationBody = GoogleLoginRequest
-    export type LoginWithGoogleMutationError = AxiosError<HTTPValidationError>
+    export type LoginWithGoogleMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Login With Google
  */
-export const useLoginWithGoogle = <TError = AxiosError<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWithGoogle>>, TError,{data: GoogleLoginRequest}, TContext>, axios?: AxiosRequestConfig}
+export const useLoginWithGoogle = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWithGoogle>>, TError,{data: GoogleLoginRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof loginWithGoogle>>,
         TError,

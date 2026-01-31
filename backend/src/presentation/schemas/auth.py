@@ -70,3 +70,7 @@ class TokenResponse(BaseModel):
     expires_in: int
     role: str
     user: UserShortInfo  
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

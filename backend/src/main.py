@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import uvicorn
 
 # --- Imports: Domain & Application ---
-from backend.src.presentation.api.v1 import auth
+from backend.src.presentation.api.v1 import auth, admin
 from backend.src.application.services.auth_service import AuthService
 
 # --- Imports: Infrastructure ---
@@ -92,8 +92,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Register Routers ---
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
 
+# --- Dependency Overrides ---
 app.dependency_overrides[auth.get_auth_service] = get_auth_service_impl
 
 if __name__ == "__main__":

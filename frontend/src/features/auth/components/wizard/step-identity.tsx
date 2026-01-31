@@ -38,7 +38,7 @@ export function StepIdentity({
   const onSubmit = async (values: IdentityFormValues) => {
     try {
       const res = await identify({ data: { identifier: values.identifier } });
-      const { next_step } = res.data;
+      const { next_step } = res;
       if (next_step === "password") {
         onSuccess("LOGIN_PASSWORD", values.identifier);
       } else {

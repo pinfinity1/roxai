@@ -26,6 +26,7 @@ class User:
     last_name: Optional[str] = None
     avatar_url: Optional[str] = None
     role: UserRole = UserRole.FREE
+    credit: int = 0
     is_verified: bool = False
     is_active: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

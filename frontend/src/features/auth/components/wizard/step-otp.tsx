@@ -35,7 +35,7 @@ export function StepOtp({
   const onSubmit = async (values: OtpFormValues) => {
     try {
       const res = await verifyOtp({ data: { identifier, code: values.code } });
-      onSuccess(res.data.verification_token);
+      onSuccess(res.verification_token);
     } catch {
       form.setError("code", { message: "کد وارد شده صحیح نیست" });
     }

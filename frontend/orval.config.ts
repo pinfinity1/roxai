@@ -8,7 +8,12 @@ export default defineConfig({
       target: "src/lib/api",
       schemas: "src/lib/api/model",
       client: "react-query",
-      baseUrl: "http://127.0.0.1:8000",
+      override: {
+        mutator: {
+          path: "./src/lib/api/custom-instance.ts",
+          name: "customInstance",
+        },
+      },
     },
   },
 });

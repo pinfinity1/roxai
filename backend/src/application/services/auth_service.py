@@ -2,7 +2,9 @@ import uuid
 import secrets
 import os
 from datetime import datetime, timedelta
-from fastapi import HTTPException, status
+from typing import Optional
+
+from fastapi import HTTPException, status, Depends
 from pwdlib import PasswordHash
 from jose import jwt, JWTError
 
@@ -11,19 +13,20 @@ from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from google.auth.exceptions import TransportError
 
-
 from backend.src.domain.interfaces import IUserRepository, ISmsService, IEmailService
 from backend.src.domain.entities.user import User, UserRole
 from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.presentation.schemas.auth import (
     IdentifyRequest, IdentifyResponse, RegisterRequest, 
-    LoginRequest, TokenResponse, GoogleLoginRequest, UserShortInfo
+    LoginRequest, TokenResponse, GoogleLoginRequest, UserShortInfo,
+    RefreshTokenRequest 
 )
 from backend.src.application.dtos.service_result import ServiceResult
 
 SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SUPER_SECRET_KEY_CHANGE_THIS")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 class AuthService:
 
@@ -131,18 +134,17 @@ class AuthService:
                 first_name=data.first_name,
                 last_name=data.last_name,
                 is_verified=True,
-                role=UserRole.FREE # نقش پیش‌فرض همیشه کاربر عادی است
+                role=UserRole.FREE
             )
             user_entity = await self.user_repo.create(new_user)
 
-        tokens = self._create_tokens(user_entity)
+        tokens = await self._create_tokens(user_entity) # Await added
         return ServiceResult(True, tokens)
 
     async def login_user(self, data: LoginRequest) -> TokenResponse:
         identifier = data.identifier
         
-        # 1. Rate Limiting for Login (New Feature)
-        # جلوگیری از حملات Brute-force: حداکثر 5 تلاش در هر دقیقه
+        # Rate Limiting for Login
         is_allowed = await self.redis.check_rate_limit(f"login:{identifier}", limit=5, window_seconds=60)
         if not is_allowed:
              raise HTTPException(
@@ -156,30 +158,63 @@ class AuthService:
             identifier = self._normalize_mobile(identifier)
             user = await self.user_repo.get_by_mobile(identifier)
 
-        # بررسی وجود کاربر و پسورد
         if not user or not user.hashed_password:
-            # برای امنیت، دقیق نمی‌گوییم کدام اشتباه است
             raise HTTPException(status_code=400, detail="نام کاربری یا رمز عبور اشتباه است")
 
         if not self.pwd_context.verify(data.password, user.hashed_password):
             raise HTTPException(status_code=400, detail="نام کاربری یا رمز عبور اشتباه است")
 
-        return self._create_tokens(user)
+        return await self._create_tokens(user)
 
     async def login_with_google(self, data: GoogleLoginRequest) -> TokenResponse:
-        # (کد قبلی گوگل بدون تغییر باقی می‌ماند)
         google_user_data = self._verify_google_token(data.id_token)
         email = google_user_data["email"]
-        # ... بقیه کد گوگل ...
-        # (فقط برای خلاصه کردن اینجا ننوشتم، کد قبلی شما صحیح است)
-        # فرض کنید همان لاجیک قبلی اجرا می‌شود و در نهایت:
-        user = await self.user_repo.get_by_email(email) 
-        # ... اگر نبود ساخته می‌شود ...
-        return self._create_tokens(user)
+        
+        user = await self.user_repo.get_by_email(email)
+        if not user:
+             new_user = User(
+                email=email,
+                first_name=google_user_data.get("given_name"),
+                last_name=google_user_data.get("family_name"),
+                is_verified=True,
+                role=UserRole.FREE,
+                hashed_password=None # گوگل پسورد ندارد
+            )
+             user = await self.user_repo.create(new_user)
+
+        return await self._create_tokens(user)
+
+
+    async def refresh_access_token(self, data: RefreshTokenRequest) -> TokenResponse:
+        # 1. جستجو در ردیس
+        user_id_str = await self.redis.get_user_id_by_refresh_token(data.refresh_token)
+        
+        if not user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="نشست کاربری نامعتبر یا منقضی شده است."
+            )
+
+        # 2. دریافت کاربر از دیتابیس
+        try:
+            user_id = uuid.UUID(user_id_str)
+            user = await self.user_repo.get_by_id(user_id)
+        except ValueError:
+             raise HTTPException(status_code=401, detail="اطلاعات کاربر مخدوش است.")
+
+        if not user or not user.is_active:
+             raise HTTPException(status_code=401, detail="کاربر یافت نشد یا غیرفعال شده است.")
+
+        # 3. چرخش توکن (Token Rotation) - امنیتی
+        # توکن قبلی را می‌سوزانیم
+        await self.redis.delete_refresh_token(data.refresh_token)
+        
+        # 4. تولید توکن‌های جدید
+        return await self._create_tokens(user)
 
     async def logout(self, token: str):
         """
-        این متد توکن را در لیست سیاه قرار می‌دهد تا دیگر قابل استفاده نباشد.
+        خروج کاربر: توکن را در بلک‌لیست ردیس می‌گذارد.
         """
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -191,22 +226,18 @@ class AuthService:
                 ttl = int(exp - current_time)
                 
                 if ttl > 0:
-                    # ذخیره در Redis با کلید bl (blacklist)
-                    # در اینجا RedisClient باید متدی برای ست کردن داشته باشد
-                    # ما فرض می‌کنیم متد generic set یا set_otp با تغییر نام وجود دارد
-                    # اما برای سادگی فعلاً از کلاینت خام استفاده می‌کنیم اگر در کلاستان متد set دارید
-                    await self.redis.client.set(f"roxai:auth:bl:{jti}", "true", ex=ttl)
+                    # ✅ استفاده از متد جدید در RedisClient
+                    await self.redis.add_to_blacklist(jti, ttl)
                     
         except JWTError:
-            pass # اگر توکن نامعتبر است، عملاً لاگ‌اوت شده محسوب می‌شود
+            pass 
         
         return True
 
-    def _create_tokens(self, user: User) -> TokenResponse:
+    async def _create_tokens(self, user: User) -> TokenResponse:
+        # 1. Access Token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         expire = datetime.utcnow() + access_token_expires
-        
-        # ✅ اضافه کردن JTI (شناسه یکتا) برای قابلیت Logout
         jti = str(uuid.uuid4())
         
         to_encode = {
@@ -215,8 +246,16 @@ class AuthService:
             "jti": jti 
         }
         to_encode.update({"exp": expire})
-        
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        
+        # 2. Refresh Token (تولید رشته امن و ذخیره در ردیس)
+        refresh_token_str = secrets.token_urlsafe(64) 
+        
+        await self.redis.set_refresh_token(
+            token=refresh_token_str, 
+            user_id=str(user.id),
+            ttl_seconds=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        )
         
         user_info = UserShortInfo(
             id=user.id,
@@ -230,13 +269,13 @@ class AuthService:
         
         return TokenResponse(
             access_token=encoded_jwt,
-            refresh_token="mock_refresh_token",
+            refresh_token=refresh_token_str, 
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             role=user.role.value,
             user=user_info 
         )
 
-    # ... (Helper methods: _normalize_mobile, _mask_identifier, _verify_google_token stay the same)
+    # ... Helper methods ...
     def _normalize_mobile(self, mobile: str) -> str:
         if mobile.startswith("+98"):
             return "0" + mobile[3:]
@@ -253,12 +292,11 @@ class AuthService:
             return f"{identifier[:4]}***{identifier[-4:]}"
 
     def _verify_google_token(self, token: str) -> dict:
-        # همان کد قبلی شما
         client_id = os.getenv("AUTH_GOOGLE_ID")
         try:
             if client_id:
                 id_info = google_id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
                 return id_info
         except Exception:
-             # لاجیک قبلی برای محیط توسعه
+             # تست برای محیط توسعه
              return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}
