@@ -68,62 +68,57 @@
 
 ### UC-03: AI Orchestration & Generation Workflow
 
-- **FeatureName:** Temporal AI Generation Pipeline
+- **FeatureName:** Configurable AI Generation Engine (Gamma-Like API)
 - **ProductContext:** Roxai Generation Engine
-- **Description:** An asynchronous, event-driven orchestration system responsible for converting high-level user intents into structured presentation content. It manages long-running workflows, handles upstream AI API interactions, enforces fault tolerance (retries, timeouts), and creates the initial document structure based on predefined templates and prompt engineering strategies.
+- **Description:** An asynchronous, event-driven orchestration system responsible for converting structured user intents into presentation content. Unlike simple chatbots, this engine accepts a complex JSON configuration (Tone, Audience, Language, Source Material) to tailor the output. It manages long-running workflows via Temporal, ensuring fault tolerance and scalability.
 - **TargetUsers:** Content Creators (Pro/Free).
 - **MainUseCases:**
-  1.  **Request Ingestion:** The system accepts user configuration (Topic, Tone, Template, Source Material) and validates credit availability.
-  2.  **Workflow Execution:** The system initiates a durable workflow to coordinate the generation steps (Outline creation, Content expansion, Image generation).
-  3.  **Step-by-Step Streaming:** The system broadcasts partial progress and intermediate results to the client via real-time channels (SSE/WebSockets).
-  4.  **Asset Synthesis:** The system generates or fetches required media assets and associates them with the relevant content blocks.
-  5.  **Failure Recovery:** Upon encountering transient errors from AI providers, the system executes exponential backoff strategies without failing the entire user request.
+  1.  **Structured Ingestion:** The system validates a `generation_config` JSON payload containing the prompt, source type (text/file/url), tone (e.g., Professional, Witty), and target audience.
+  2.  **Credit Validation:** Before execution, the system calculates the estimated cost (e.g., 40 credits) and locks the user's balance.
+  3.  **Workflow Execution:** The system initiates a durable workflow (Outline -> Expansion -> Image Generation) using the specific configuration parameters.
+  4.  **Real-time Streaming:** The system broadcasts partial progress (e.g., "Generating Slide 3...") to the client.
+  5.  **Failure Recovery:** If an AI provider fails, the system retries with exponential backoff without losing the user's credits or request state.
 - **TechStack:**
   - **Orchestration:** Temporal.io.
-  - **Backend:** Python (Worker Nodes), LangChain/LlamaIndex.
-  - **AI Providers:** OpenAI/Anthropic/Local LLM APIs.
+  - **Data Structure:** JSONB (for `generation_config` storage).
+  - **AI Providers:** OpenAI/Anthropic.
 - **Constraints:**
-  - The workflow must be deterministic to ensure replayability in Temporal.
-  - API keys and sensitive prompts must be securely managed and not exposed to the client.
+  - Input prompts must be sanitized to prevent prompt injection attacks.
+  - The "Tone" and "Audience" settings must strongly influence the system prompt sent to the LLM.
 - **EdgeCases:**
-  - Content policy violations triggering refusals from the AI provider.
-  - Context window exhaustion for large source documents.
-  - Sudden server termination during an active workflow (Temporal recovery).
+  - User requests generation in an unsupported language.
+  - Source text is too long for the LLM context window (requires chunking strategy).
 - **NonFunctionalNeeds:**
-  - **Scalability:** The system must handle concurrent generation requests via worker queues.
-  - **Observability:** Full tracing of the generation chain is required for debugging quality issues.
-- **Dependencies:** Credit Ledger (Billing), External AI APIs.
-- **Risks:** High variability in AI response latency and quality.
+  - **Reproducibility:** The same config should produce similar structural results.
+- **Dependencies:** Credit Ledger, AI Service.
 
 ---
 
-### UC-04: Subscription & Billing System (Iranian Market)
+### UC-04: Subscription & Credit System (SaaS Model)
 
-- **FeatureName:** Credit-Based Wallet & Subscription Manager
+- **FeatureName:** Hybrid Subscription & Wallet Manager
 - **ProductContext:** Roxai Business Platform
-- **Description:** A financial module tailored for local payment gateways. It manages subscription tiers (SaaS plans) and a transactional credit ledger for consumption-based usage. It ensures strict consistency between payment verification and entitlement granting, handling the specific nuances of redirection-based payment flows.
+- **Description:** The financial backbone of the platform, modeled after modern SaaS standards (e.g., Gamma). Instead of direct monetary charges per action, users subscribe to tiers (Free, Plus, Pro) which grant a monthly allowance of "AI Credits". The system handles recurring billing, monthly credit resets, and top-up purchases.
 - **TargetUsers:** Workspace Owners, Finance Admins.
 - **MainUseCases:**
-  1.  **Plan Management:** Users upgrade, downgrade, or cancel subscription tiers, triggering logic for feature access and expiration dates.
-  2.  **Payment Processing:** The system initiates payment sessions with local providers (ZarinPal/Zibal), handles redirection, and verifies transaction finality via callbacks.
-  3.  **Credit Ledger Operations:** The system deducts credits for specific high-value actions (AI Generation, Export), enforcing atomic checks to prevent negative balances.
-  4.  **Invoice Generation:** The system generates official, compliant invoices for completed transactions.
-  5.  **Usage Tracking:** The system records consumption metrics to provide users with historical usage data.
+  1.  **Tiered Subscription:** Users purchase monthly/annual plans (Plus, Pro) to unlock features (Remove Watermark) and increase credit caps.
+  2.  **Monthly Reset Logic:** A scheduled job runs monthly to reset the user's credit balance to their plan's cap (e.g., 400 for Free, 4000 for Pro).
+  3.  **Consumption:** Credits are deducted per action (e.g., 10 credits per slide, 5 per image edit).
+  4.  **Top-Ups:** Users running out of credits mid-month can purchase one-time credit packs without changing their plan.
+  5.  **Plan Downgrade/Expiry:** Upon subscription expiry, the user reverts to the "Free" tier limits and features.
 - **TechStack:**
-  - **Backend:** FastAPI, PostgreSQL (Transactional Isolation).
-  - **Gateways:** ZarinPal / Zibal SDKs.
+  - **Backend:** FastAPI, PostgreSQL (Users Table: `plan_id`, `subscription_expires_at`).
+  - **Scheduling:** Temporal Cron (for monthly resets).
+  - **Payment:** ZarinPal / Zibal.
 - **Constraints:**
-  - Double-spending prevention is mandatory via database row locking.
-  - Payment callback verification must be idempotent to handle duplicate webhook delivery.
+  - Credit deduction must be atomic to prevent race conditions (Double Spending).
+  - Users must clearly see the "Cost in Credits" before confirming an action.
 - **EdgeCases:**
-  - User closes the browser during the banking redirection flow.
-  - Successful bank deduction but failed callback verification (Reconciliation logic).
-  - Subscription expiration during an active long-running task.
+  - Payment callback arrives after the subscription has technically expired.
+  - A scheduled credit reset happens exactly while a user is generating content.
 - **NonFunctionalNeeds:**
-  - **Accuracy:** Zero tolerance for financial data discrepancies.
-  - **Auditability:** Immutable logs for all credit changes.
-- **Dependencies:** Identity Provider, Notification Service.
-- **Risks:** Regulatory changes in local payment networks.
+  - **Auditability:** Every credit deduction must be logged in a `ledger` table.
+- **Dependencies:** Identity Provider.
 
 ---
 
@@ -186,7 +181,34 @@
 
 ---
 
-### UC-07: Public Marketing & Conversion Portal (Landing Page)
+### UC-07: User Personal Workspace & Project Library
+
+- **FeatureName:** Project Dashboard & Asset Management
+- **ProductContext:** Roxai User Platform
+- **Description:** The central hub for authenticated users. It serves as the entry point after login, providing a unified view of the user's digital assets (presentations), resource consumption (credits), and account settings. It manages the lifecycle of a project _outside_ of the editing canvas (Create, Rename, Archive, Delete) and acts as the launchpad for the AI generation workflow.
+- **TargetUsers:** All Authenticated Users.
+- **MainUseCases:**
+  1.  **Project Grid Visualization:** Display user projects with a Title, Status Badge (Draft/Generating/Done), Last Edited Date, and a visual Thumbnail.
+  2.  **New Project Trigger:** A prominent entry point to start the `generation_config` flow (UC-03).
+  3.  **Organization:** Users can Rename, Duplicate, or Archive (Soft Delete) projects.
+  4.  **Credit Visibility:** The current credit balance and plan badge (e.g., "Pro") are persistently visible in the layout.
+  5.  **State Reflection:** If a project is currently being generated by AI, the card shows a progress bar instead of a thumbnail.
+- **TechStack:**
+  - **Frontend:** Next.js 15, Shadcn/ui (Cards, Dropdowns).
+  - **Backend:** FastAPI, PostgreSQL (New `projects` table).
+- **Constraints:**
+  - **Performance:** Thumbnails should be lazy-loaded.
+  - **Access Control:** Users can strictly only see/edit projects where `user_id` matches their own (Tenant Isolation).
+- **EdgeCases:**
+  - User tries to open a project that is still in "Generating" state (Show loading screen).
+  - Thumbnail generation fails (Fallback to a generated placeholder icon).
+- **NonFunctionalNeeds:**
+  - **Zero-Data State:** A compelling "Empty State" UI that encourages the first creation.
+- **Dependencies:** Auth Service, Project Repository.
+
+---
+
+### UC-08: Public Marketing & Conversion Portal (Landing Page)
 
 - **FeatureName:** High-Performance Marketing Front
 - **ProductContext:** Roxai Public Website
