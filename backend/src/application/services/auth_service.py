@@ -333,39 +333,113 @@ class AuthService:
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # ۱. آپدیت اطلاعات پایه
-        if data.first_name is not None: user.first_name = data.first_name
-        if data.last_name is not None: user.last_name = data.last_name
-        if data.avatar_url is not None: user.avatar_url = data.avatar_url
+        # ✅ فقط فیلدهای امن (غیر از موبایل/ایمیل) اینجا آپدیت می‌شوند
+        updated = False
+        if data.first_name is not None: 
+            user.first_name = data.first_name
+            updated = True
+        if data.last_name is not None: 
+            user.last_name = data.last_name
+            updated = True
+        if data.avatar_url is not None: 
+            user.avatar_url = data.avatar_url
+            updated = True
+        
+        if updated:
+            user = await self.user_repo.update(user)
 
-        # ۲. آپدیت ایمیل (با چک کردن یکتایی)
-        if data.email is not None and data.email != user.email:
-            existing = await self.user_repo.get_by_email(data.email)
-            if existing:
-                raise HTTPException(status_code=409, detail="این ایمیل قبلاً ثبت شده است.")
-            user.email = data.email
-            # نکته امنیتی: در نسخه نهایی اینجا باید is_verified = False شود و ایمیل تایید ارسال شود.
+        return self._map_to_short_info(user)
 
-        # ۳. آپدیت موبایل (با چک کردن یکتایی)
-        if data.mobile is not None:
-            mobile_normalized = self._normalize_mobile(data.mobile)
-            if mobile_normalized != user.mobile:
-                existing = await self.user_repo.get_by_mobile(mobile_normalized)
-                if existing:
-                    raise HTTPException(status_code=409, detail="این شماره موبایل قبلاً ثبت شده است.")
-                user.mobile = mobile_normalized
+    async def request_identifier_change(self, user_id: uuid.UUID, new_identifier: str):
+        """
+        مرحله ۱: درخواست تغییر موبایل/ایمیل
+        - چک کردن یکتایی
+        - ارسال OTP به مقصد *جدید*
+        """
+        # نرمال‌سازی
+        if "@" not in new_identifier:
+            new_identifier = self._normalize_mobile(new_identifier)
+        
+        # ۱. بررسی تکراری نبودن
+        existing = None
+        if "@" in new_identifier:
+            existing = await self.user_repo.get_by_email(new_identifier)
+        else:
+            existing = await self.user_repo.get_by_mobile(new_identifier)
+            
+        if existing:
+            raise HTTPException(status_code=409, detail="این شماره/ایمیل قبلاً توسط کاربر دیگری ثبت شده است.")
 
-        updated_user = await self.user_repo.update(user)
+        # ۲. تولید OTP
+        otp_code = str(secrets.randbelow(900000) + 100000)
+        
+        # ۳. ذخیره در Redis با کلید موقت (Pending)
+        # فرمت کلید: roxai:change_request:{user_id} -> {identifier: ..., code: ...}
+        import json
+        payload = json.dumps({"identifier": new_identifier, "code": otp_code})
+        await self.redis.client.set(f"roxai:change_req:{user_id}", payload, ex=300) # ۵ دقیقه اعتبار
 
+        # ۴. ارسال به مقصد *جدید* (Security Critical)
+        if "@" in new_identifier:
+            await self.email_service.send_otp(new_identifier, otp_code)
+        else:
+            await self.sms_service.send_otp(new_identifier, otp_code)
+            
+        return ServiceResult(True, "کد تایید به شماره/ایمیل جدید ارسال شد.")
+
+    async def confirm_identifier_change(self, user_id: uuid.UUID, new_identifier: str, code: str):
+        """
+        مرحله ۲: اعمال تغییر پس از تایید OTP
+        """
+        # نرمال‌سازی برای مقایسه
+        if "@" not in new_identifier:
+            new_identifier = self._normalize_mobile(new_identifier)
+
+        # ۱. بازیابی از Redis
+        import json
+        cached_data_str = await self.redis.client.get(f"roxai:change_req:{user_id}")
+        
+        if not cached_data_str:
+            raise HTTPException(status_code=400, detail="درخواست تغییر منقضی شده یا وجود ندارد.")
+            
+        cached_data = json.loads(cached_data_str)
+        
+        # ۲. بررسی تطابق
+        if cached_data["identifier"] != new_identifier:
+            raise HTTPException(status_code=400, detail="مغایرت در شماره/ایمیل درخواستی.")
+            
+        if cached_data["code"] != code:
+            raise HTTPException(status_code=400, detail="کد تایید اشتباه است.")
+
+        # ۳. اعمال تغییر در دیتابیس
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        if "@" in new_identifier:
+            user.email = new_identifier
+            # اگر قبلاً موبایل داشت و الان ایمیل داد، شاید بخواهید استراتژی خاصی داشته باشید
+            # ولی اینجا فرض بر جایگزینی یا افزودن است.
+        else:
+            user.mobile = new_identifier
+
+        await self.user_repo.update(user)
+        
+        # ۴. پاک کردن کش
+        await self.redis.client.delete(f"roxai:change_req:{user_id}")
+        
+        return ServiceResult(True, "اطلاعات تماس با موفقیت بروزرسانی شد.")
+
+    def _map_to_short_info(self, user: User) -> UserShortInfo:
         return UserShortInfo(
-            id=updated_user.id,
-            email=updated_user.email,
-            mobile=updated_user.mobile,
-            first_name=updated_user.first_name,
-            last_name=updated_user.last_name,
-            avatar_url=updated_user.avatar_url,
-            role=updated_user.role.value,
-            credit=updated_user.credit
+            id=user.id,
+            email=user.email,
+            mobile=user.mobile,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            avatar_url=user.avatar_url,
+            role=user.role.value,
+            credit=user.credit
         )
 
     async def change_password(self, user_id: uuid.UUID, data: ChangePasswordRequest):

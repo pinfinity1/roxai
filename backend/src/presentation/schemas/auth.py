@@ -74,15 +74,22 @@ class UpdateProfileRequest(BaseModel):
     first_name: Optional[str] = Field(None, min_length=2, max_length=50)
     last_name: Optional[str] = Field(None, min_length=2, max_length=50)
     avatar_url: Optional[str] = None
-    email: Optional[EmailStr] = None
-    mobile: Optional[str] = None
 
-    @field_validator("mobile")
+class RequestIdentifierChange(BaseModel):
+    new_identifier: str = Field(..., description="شماره موبایل یا ایمیل جدید")
+
+    @field_validator("new_identifier")
     @classmethod
-    def validate_mobile(cls, v):
-        if v and not re.match(IR_MOBILE_REGEX, v):
-             raise ValueError("Invalid mobile number format")
+    def validate_identifier(cls, v):
+        is_email = "@" in v
+        is_mobile = re.match(r"^(?:\+98|0)?9\d{9}$", v)
+        if not is_email and not is_mobile:
+            raise ValueError("فرمت ایمیل یا شماره موبایل صحیح نیست.")
         return v
+
+class ConfirmIdentifierChange(BaseModel):
+    new_identifier: str
+    code: str = Field(..., min_length=4, max_length=6)
 
 class ChangePasswordRequest(BaseModel):
     old_password: str = Field(..., min_length=8, description="رمز عبور فعلی")

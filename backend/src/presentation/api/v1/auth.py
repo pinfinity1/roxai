@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, status, HTTPException
 from backend.src.presentation.schemas.auth import (
-    IdentifyRequest, IdentifyResponse, 
+    ConfirmIdentifierChange, IdentifyRequest, IdentifyResponse, RequestIdentifierChange, 
     SendOtpRequest, UserShortInfo, VerifyOtpRequest, VerifyOtpResponse,
     RegisterRequest, LoginRequest, TokenResponse, 
     GoogleLoginRequest, RefreshTokenRequest , UpdateProfileRequest, 
@@ -132,6 +132,28 @@ async def update_my_profile(
     """
     user_id = uuid.UUID(token.get("sub"))
     return await service.update_profile(user_id, data)
+
+@router.post("/me/identifier/request", operation_id="request_identifier_change")
+async def request_identifier_change(
+    data: RequestIdentifierChange,
+    token: dict = Depends(verify_token_security),
+    service: AuthService = Depends(get_auth_service)
+):
+    """درخواست تغییر موبایل یا ایمیل (ارسال OTP به مقصد جدید)"""
+    user_id = uuid.UUID(token.get("sub"))
+    result = await service.request_identifier_change(user_id, data.new_identifier)
+    return {"status": "success", "message": result.message}
+
+@router.post("/me/identifier/confirm", operation_id="confirm_identifier_change")
+async def confirm_identifier_change(
+    data: ConfirmIdentifierChange,
+    token: dict = Depends(verify_token_security),
+    service: AuthService = Depends(get_auth_service)
+):
+    """تایید نهایی تغییر موبایل یا ایمیل"""
+    user_id = uuid.UUID(token.get("sub"))
+    result = await service.confirm_identifier_change(user_id, data.new_identifier, data.code)
+    return {"status": "success", "message": result.message}
 
 @router.post("/change-password", operation_id="change_password")
 async def change_password(
