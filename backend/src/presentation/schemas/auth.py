@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field, field_validator, EmailStr 
 from typing import Optional, Literal
 import re
-import uuid  # ✅ این خط اضافه شد
+import uuid 
 
 IR_MOBILE_REGEX = r"^(?:\+98|0)?9\d{9}$"
 
-# --- Shared Models ---
 class IdentifyRequest(BaseModel):
     identifier: str = Field(..., description="Email or Iranian Mobile Number")
 
@@ -24,7 +23,6 @@ class IdentifyResponse(BaseModel):
     next_step: Literal["password", "otp", "register"]
     masked_identifier: str 
 
-# ✅ مدل جدید اطلاعات کاربر
 class UserShortInfo(BaseModel):
     id: uuid.UUID
     email: Optional[EmailStr] = None
@@ -35,7 +33,6 @@ class UserShortInfo(BaseModel):
     role: str
     credit: int = 0
 
-# --- OTP Flow ---
 class SendOtpRequest(BaseModel):
     identifier: str
 
@@ -47,23 +44,19 @@ class VerifyOtpResponse(BaseModel):
     verification_token: str
     message: str = "OTP verified successfully. Proceed to registration."
 
-# --- Registration Flow ---
 class RegisterRequest(BaseModel):
     verification_token: str = Field(..., description="Token received from verify-otp endpoint")
     password: str = Field(..., min_length=8)
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
-# --- Login Flow ---
 class LoginRequest(BaseModel):
     identifier: str
     password: str
 
-# --- Google Auth Flow ---
 class GoogleLoginRequest(BaseModel):
     id_token: str = Field(..., description="Google ID Token received from Frontend")
 
-# ✅ آپدیت شده برای شامل شدن user info
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -75,3 +68,22 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class UpdateProfileRequest(BaseModel):
+    first_name: Optional[str] = Field(None, min_length=2, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=2, max_length=50)
+    avatar_url: Optional[str] = None
+    email: Optional[EmailStr] = None
+    mobile: Optional[str] = None
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile(cls, v):
+        if v and not re.match(IR_MOBILE_REGEX, v):
+             raise ValueError("Invalid mobile number format")
+        return v
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=8, description="رمز عبور فعلی")
+    new_password: str = Field(..., min_length=8, description="رمز عبور جدید")

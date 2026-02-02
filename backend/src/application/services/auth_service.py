@@ -17,8 +17,8 @@ from backend.src.domain.interfaces import IUserRepository, ISmsService, IEmailSe
 from backend.src.domain.entities.user import User, UserRole
 from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.presentation.schemas.auth import (
-    IdentifyRequest, IdentifyResponse, RegisterRequest, 
-    LoginRequest, TokenResponse, GoogleLoginRequest, UserShortInfo,
+    ChangePasswordRequest, IdentifyRequest, IdentifyResponse, RegisterRequest, 
+    LoginRequest, TokenResponse, GoogleLoginRequest, UpdateProfileRequest, UserShortInfo,
     RefreshTokenRequest 
 )
 from backend.src.application.dtos.service_result import ServiceResult
@@ -316,3 +316,62 @@ class AuthService:
             
             print(f"⚠️ Google Auth Failed (Dev Mode Fallback): {e}")
             return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}
+        
+    async def update_profile(self, user_id: uuid.UUID, data: UpdateProfileRequest) -> UserShortInfo:
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # ۱. آپدیت اطلاعات پایه
+        if data.first_name is not None: user.first_name = data.first_name
+        if data.last_name is not None: user.last_name = data.last_name
+        if data.avatar_url is not None: user.avatar_url = data.avatar_url
+
+        # ۲. آپدیت ایمیل (با چک کردن یکتایی)
+        if data.email is not None and data.email != user.email:
+            existing = await self.user_repo.get_by_email(data.email)
+            if existing:
+                raise HTTPException(status_code=409, detail="این ایمیل قبلاً ثبت شده است.")
+            user.email = data.email
+            # نکته امنیتی: در نسخه نهایی اینجا باید is_verified = False شود و ایمیل تایید ارسال شود.
+
+        # ۳. آپدیت موبایل (با چک کردن یکتایی)
+        if data.mobile is not None:
+            mobile_normalized = self._normalize_mobile(data.mobile)
+            if mobile_normalized != user.mobile:
+                existing = await self.user_repo.get_by_mobile(mobile_normalized)
+                if existing:
+                    raise HTTPException(status_code=409, detail="این شماره موبایل قبلاً ثبت شده است.")
+                user.mobile = mobile_normalized
+
+        updated_user = await self.user_repo.update(user)
+
+        return UserShortInfo(
+            id=updated_user.id,
+            email=updated_user.email,
+            mobile=updated_user.mobile,
+            first_name=updated_user.first_name,
+            last_name=updated_user.last_name,
+            avatar_url=updated_user.avatar_url,
+            role=updated_user.role.value,
+            credit=updated_user.credit
+        )
+
+    async def change_password(self, user_id: uuid.UUID, data: ChangePasswordRequest):
+        """تغییر رمز عبور با بررسی رمز قبلی"""
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        if not user.hashed_password:
+             raise HTTPException(status_code=400, detail="این حساب رمز عبور ندارد (ورود با گوگل/OTP).")
+
+        # بررسی رمز قدیمی
+        if not self.pwd_context.verify(data.old_password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="رمز عبور فعلی اشتباه است.")
+            
+        # هش کردن و ذخیره رمز جدید
+        user.hashed_password = self.pwd_context.hash(data.new_password)
+        await self.user_repo.update(user)
+        
+        return ServiceResult(True, "رمز عبور با موفقیت تغییر کرد.")

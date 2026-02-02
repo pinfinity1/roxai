@@ -2,9 +2,10 @@ import uuid
 from fastapi import APIRouter, Depends, status, HTTPException
 from backend.src.presentation.schemas.auth import (
     IdentifyRequest, IdentifyResponse, 
-    SendOtpRequest, VerifyOtpRequest, VerifyOtpResponse,
+    SendOtpRequest, UserShortInfo, VerifyOtpRequest, VerifyOtpResponse,
     RegisterRequest, LoginRequest, TokenResponse, 
-    GoogleLoginRequest, RefreshTokenRequest
+    GoogleLoginRequest, RefreshTokenRequest , UpdateProfileRequest, 
+    ChangePasswordRequest
 )
 from backend.src.application.services.auth_service import AuthService
 
@@ -116,3 +117,31 @@ async def get_my_credit(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user.credit
+
+
+@router.patch("/me", response_model=UserShortInfo, operation_id="update_my_profile")
+async def update_my_profile(
+    data: UpdateProfileRequest,
+    token: dict = Depends(verify_token_security),
+    service: AuthService = Depends(get_auth_service)
+):
+    """
+    Update profile info (Name, Avatar, Email, Mobile).
+    Checks for unique email/mobile before updating.
+    """
+    user_id = uuid.UUID(token.get("sub"))
+    return await service.update_profile(user_id, data)
+
+@router.post("/change-password", operation_id="change_password")
+async def change_password(
+    data: ChangePasswordRequest,
+    token: dict = Depends(verify_token_security),
+    service: AuthService = Depends(get_auth_service)
+):
+    """
+    Securely change the account password.
+    Requires the old password for verification.
+    """
+    user_id = uuid.UUID(token.get("sub"))
+    result = await service.change_password(user_id, data)
+    return {"status": "success", "message": result.message}
