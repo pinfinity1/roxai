@@ -18,4 +18,5 @@ export interface UserShortInfo {
   last_name?: UserShortInfoLastName;
   avatar_url?: UserShortInfoAvatarUrl;
   role: string;
+  credit?: number;
 }

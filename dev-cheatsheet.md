@@ -33,3 +33,7 @@ cd frontend && npm run dev
 ## ۷. دستور tree کامل (Excluded Directories)
 
 tree -I "node_modules|venv|**pycache**|.git|.next|.mypy_cache|dist|build|postgres_data|minio_data|.DS_Store" --dirsfirst
+
+npx repomix --include "backend/**,docker-compose.yml,pytest.ini,docs/**,\*.md"
+
+npx repomix --include "frontend/**,docs/**,\*.md,docker-compose.yml"

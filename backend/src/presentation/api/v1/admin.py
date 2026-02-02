@@ -14,7 +14,7 @@ from backend.src.presentation.dependencies import (
     require_super_admin, 
     get_current_admin_id
 )
-from src.infrastructure.cache.redis_client import RedisClient
+from backend.src.infrastructure.cache.redis_client import RedisClient
 
 # DB Setup
 from backend.src.infrastructure.db.setup import get_db

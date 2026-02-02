@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from backend.src.domain.entities.user import UserRole
-from src.domain.entities.project import ProjectStatus
+from backend.src.domain.entities.project import ProjectStatus
 
 # --- Shared Schemas (موجود) ---
 class AdminUserFilter(BaseModel):

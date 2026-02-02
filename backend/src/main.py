@@ -16,7 +16,7 @@ from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.infrastructure.db.setup import engine, get_db
 from backend.src.infrastructure.db.models import Base 
 from backend.src.infrastructure.db.models.user import UserModel 
-from src.infrastructure.repositories.user import SqlAlchemyUserRepository
+from backend.src.infrastructure.repositories.user import SqlAlchemyUserRepository
 from backend.src.infrastructure.external.sms import ConsoleSmsService, RemoteSmsService
 from backend.src.infrastructure.external.email import ConsoleEmailService, SmtpEmailService
 from backend.src.presentation.api.v1 import folders

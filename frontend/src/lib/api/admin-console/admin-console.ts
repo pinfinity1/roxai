@@ -24,12 +24,22 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminDeleteProjectParams,
+  AdminListProjectsParams,
+  AuditLogResponseItem,
+  ChangeRoleRequest,
   CreditAdjustmentRequest,
+  FeatureFlagResponse,
+  FeatureFlagUpdateRequest,
   HTTPValidationError,
   ImpersonateRequest,
   ImpersonateResponse,
   ListUsersParams,
-  PaginatedUserResponse
+  PaginatedProjectResponse,
+  PaginatedUserResponse,
+  SoftDeleteUserParams,
+  SystemHealthResponse,
+  UserStatusChangeRequest
 } from '.././model';
 
 import { customInstance } from '.././custom-instance';
@@ -41,7 +51,6 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * دریافت لیست کاربران با قابلیت جستجو و فیلتر.
  * @summary List Users
  */
 export const listUsers = (
@@ -259,6 +268,610 @@ export const useImpersonateUser = <TError = ErrorType<HTTPValidationError>,
       > => {
 
       const mutationOptions = getImpersonateUserMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * تغییر وضعیت فعال/غیرفعال بودن کاربر (Ban/Unban).
+امنیت: ادمین نمی‌تواند خودش را بن کند (Self-Lockout Prevention).
+ * @summary Change User Status
+ */
+export const changeUserStatus = (
+    userStatusChangeRequest: UserStatusChangeRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/admin/users/status`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: userStatusChangeRequest
+    },
+      options);
+    }
+  
+
+
+export const getChangeUserStatusMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUserStatus>>, TError,{data: UserStatusChangeRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeUserStatus>>, TError,{data: UserStatusChangeRequest}, TContext> => {
+
+const mutationKey = ['changeUserStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeUserStatus>>, {data: UserStatusChangeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  changeUserStatus(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeUserStatusMutationResult = NonNullable<Awaited<ReturnType<typeof changeUserStatus>>>
+    export type ChangeUserStatusMutationBody = UserStatusChangeRequest
+    export type ChangeUserStatusMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Change User Status
+ */
+export const useChangeUserStatus = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUserStatus>>, TError,{data: UserStatusChangeRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeUserStatus>>,
+        TError,
+        {data: UserStatusChangeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getChangeUserStatusMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * دریافت تاریخچه کامل تغییرات اعمال شده روی یک کاربر توسط ادمین‌ها.
+ * @summary Get User Audit Logs
+ */
+export const getUserAuditLogs = (
+    userId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AuditLogResponseItem[]>(
+      {url: `/api/v1/admin/users/${userId}/audit-logs`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetUserAuditLogsQueryKey = (userId?: string,) => {
+    return [
+    `/api/v1/admin/users/${userId}/audit-logs`
+    ] as const;
+    }
+
+    
+export const getGetUserAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserAuditLogsQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAuditLogs>>> = ({ signal }) => getUserAuditLogs(userId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUserAuditLogsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserAuditLogs>>>
+export type GetUserAuditLogsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserAuditLogs>>,
+          TError,
+          Awaited<ReturnType<typeof getUserAuditLogs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserAuditLogs>>,
+          TError,
+          Awaited<ReturnType<typeof getUserAuditLogs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get User Audit Logs
+ */
+
+export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUserAuditLogsQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * داشبورد وضعیت سیستم: تعداد کاربران، کاربران فعال ۲۴ ساعت گذشته و وضعیت دیتابیس.
+ * @summary Get System Health
+ */
+export const getSystemHealth = (
+    
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<SystemHealthResponse>(
+      {url: `/api/v1/admin/telemetry/health`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetSystemHealthQueryKey = () => {
+    return [
+    `/api/v1/admin/telemetry/health`
+    ] as const;
+    }
+
+    
+export const getGetSystemHealthQueryOptions = <TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemHealthQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemHealth>>> = ({ signal }) => getSystemHealth(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSystemHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemHealth>>>
+export type GetSystemHealthQueryError = ErrorType<unknown>
+
+
+export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSystemHealth>>,
+          TError,
+          Awaited<ReturnType<typeof getSystemHealth>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSystemHealth>>,
+          TError,
+          Awaited<ReturnType<typeof getSystemHealth>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get System Health
+ */
+
+export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemHealth>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSystemHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * تغییر سطح دسترسی کاربر (مثلاً ارتقا به پشتیبان یا مدیر).
+فقط سوپر ادمین می‌تواند این کار را انجام دهد.
+ * @summary Change User Role
+ */
+export const changeUserRole = (
+    changeRoleRequest: ChangeRoleRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/admin/users/role`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: changeRoleRequest
+    },
+      options);
+    }
+  
+
+
+export const getChangeUserRoleMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUserRole>>, TError,{data: ChangeRoleRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeUserRole>>, TError,{data: ChangeRoleRequest}, TContext> => {
+
+const mutationKey = ['changeUserRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeUserRole>>, {data: ChangeRoleRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  changeUserRole(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeUserRoleMutationResult = NonNullable<Awaited<ReturnType<typeof changeUserRole>>>
+    export type ChangeUserRoleMutationBody = ChangeRoleRequest
+    export type ChangeUserRoleMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Change User Role
+ */
+export const useChangeUserRole = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeUserRole>>, TError,{data: ChangeRoleRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeUserRole>>,
+        TError,
+        {data: ChangeRoleRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getChangeUserRoleMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * حذف نرم کاربر (Soft Delete).
+رکورد از دیتابیس پاک نمی‌شود، بلکه فیلد deleted_at مقداردهی می‌شود.
+کاربر پس از این عملیات دیگر نمی‌تواند لاگین کند.
+ * @summary Soft Delete User
+ */
+export const softDeleteUser = (
+    userId: string,
+    params: SoftDeleteUserParams,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/admin/users/${userId}`, method: 'DELETE',
+        params
+    },
+      options);
+    }
+  
+
+
+export const getSoftDeleteUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof softDeleteUser>>, TError,{userId: string;params: SoftDeleteUserParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof softDeleteUser>>, TError,{userId: string;params: SoftDeleteUserParams}, TContext> => {
+
+const mutationKey = ['softDeleteUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof softDeleteUser>>, {userId: string;params: SoftDeleteUserParams}> = (props) => {
+          const {userId,params} = props ?? {};
+
+          return  softDeleteUser(userId,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SoftDeleteUserMutationResult = NonNullable<Awaited<ReturnType<typeof softDeleteUser>>>
+    
+    export type SoftDeleteUserMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Soft Delete User
+ */
+export const useSoftDeleteUser = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof softDeleteUser>>, TError,{userId: string;params: SoftDeleteUserParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof softDeleteUser>>,
+        TError,
+        {userId: string;params: SoftDeleteUserParams},
+        TContext
+      > => {
+
+      const mutationOptions = getSoftDeleteUserMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * ایجاد یا بروزرسانی یک Feature Flag.
+هم دیتابیس را آپدیت می‌کند و هم کش Redis را Invalidate می‌کند.
+ * @summary Update Feature Flag
+ */
+export const updateFeatureFlag = (
+    key: string,
+    featureFlagUpdateRequest: FeatureFlagUpdateRequest,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<FeatureFlagResponse>(
+      {url: `/api/v1/admin/feature-flags/${key}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: featureFlagUpdateRequest
+    },
+      options);
+    }
+  
+
+
+export const getUpdateFeatureFlagMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeatureFlag>>, TError,{key: string;data: FeatureFlagUpdateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFeatureFlag>>, TError,{key: string;data: FeatureFlagUpdateRequest}, TContext> => {
+
+const mutationKey = ['updateFeatureFlag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFeatureFlag>>, {key: string;data: FeatureFlagUpdateRequest}> = (props) => {
+          const {key,data} = props ?? {};
+
+          return  updateFeatureFlag(key,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFeatureFlagMutationResult = NonNullable<Awaited<ReturnType<typeof updateFeatureFlag>>>
+    export type UpdateFeatureFlagMutationBody = FeatureFlagUpdateRequest
+    export type UpdateFeatureFlagMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Update Feature Flag
+ */
+export const useUpdateFeatureFlag = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeatureFlag>>, TError,{key: string;data: FeatureFlagUpdateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateFeatureFlag>>,
+        TError,
+        {key: string;data: FeatureFlagUpdateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateFeatureFlagMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * مشاهده تمام پروژه‌های سیستم با قابلیت فیلتر بر اساس کاربر یا وضعیت.
+مناسب برای پشتیبانی و نظارت.
+ * @summary List All Projects
+ */
+export const adminListProjects = (
+    params?: AdminListProjectsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PaginatedProjectResponse>(
+      {url: `/api/v1/admin/projects`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getAdminListProjectsQueryKey = (params?: AdminListProjectsParams,) => {
+    return [
+    `/api/v1/admin/projects`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getAdminListProjectsQueryOptions = <TData = Awaited<ReturnType<typeof adminListProjects>>, TError = ErrorType<HTTPValidationError>>(params?: AdminListProjectsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListProjectsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListProjects>>> = ({ signal }) => adminListProjects(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AdminListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListProjects>>>
+export type AdminListProjectsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useAdminListProjects<TData = Awaited<ReturnType<typeof adminListProjects>>, TError = ErrorType<HTTPValidationError>>(
+ params: undefined |  AdminListProjectsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminListProjects>>,
+          TError,
+          Awaited<ReturnType<typeof adminListProjects>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminListProjects<TData = Awaited<ReturnType<typeof adminListProjects>>, TError = ErrorType<HTTPValidationError>>(
+ params?: AdminListProjectsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminListProjects>>,
+          TError,
+          Awaited<ReturnType<typeof adminListProjects>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminListProjects<TData = Awaited<ReturnType<typeof adminListProjects>>, TError = ErrorType<HTTPValidationError>>(
+ params?: AdminListProjectsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List All Projects
+ */
+
+export function useAdminListProjects<TData = Awaited<ReturnType<typeof adminListProjects>>, TError = ErrorType<HTTPValidationError>>(
+ params?: AdminListProjectsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminListProjects>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAdminListProjectsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * حذف اجباری پروژه توسط ادمین (مثلاً محوای نامناسب).
+ * @summary Admin Delete Project
+ */
+export const adminDeleteProject = (
+    projectId: string,
+    params: AdminDeleteProjectParams,
+ options?: SecondParameter<typeof customInstance>,) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/admin/projects/${projectId}`, method: 'DELETE',
+        params
+    },
+      options);
+    }
+  
+
+
+export const getAdminDeleteProjectMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProject>>, TError,{projectId: string;params: AdminDeleteProjectParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProject>>, TError,{projectId: string;params: AdminDeleteProjectParams}, TContext> => {
+
+const mutationKey = ['adminDeleteProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteProject>>, {projectId: string;params: AdminDeleteProjectParams}> = (props) => {
+          const {projectId,params} = props ?? {};
+
+          return  adminDeleteProject(projectId,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteProjectMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteProject>>>
+    
+    export type AdminDeleteProjectMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Admin Delete Project
+ */
+export const useAdminDeleteProject = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteProject>>, TError,{projectId: string;params: AdminDeleteProjectParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteProject>>,
+        TError,
+        {projectId: string;params: AdminDeleteProjectParams},
+        TContext
+      > => {
+
+      const mutationOptions = getAdminDeleteProjectMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

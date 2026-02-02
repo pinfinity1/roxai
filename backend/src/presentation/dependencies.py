@@ -19,7 +19,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # --- Authentication Helpers ---
 
-async def verify_token_security(token: str, redis: RedisClient) -> dict:
+async def verify_token_security(
+    token: str = Depends(oauth2_scheme), 
+    redis: RedisClient = Depends(get_redis_dependency)
+) -> dict:
     """تابع کمکی برای بررسی امضا و بلک‌لیست توکن"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

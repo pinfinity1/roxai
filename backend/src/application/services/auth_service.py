@@ -45,6 +45,17 @@ class AuthService:
 
     async def identify_user(self, data: IdentifyRequest) -> IdentifyResponse:
         identifier = data.identifier
+
+        is_allowed = await self.redis.check_rate_limit(
+            f"identify:{identifier}", 
+            limit=10, 
+            window_seconds=60
+        )
+        if not is_allowed:
+             raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="تعداد درخواست‌ها زیاد است. لطفا کمی صبر کنید."
+            )
         
         if "@" in identifier:
             auth_type = "email"

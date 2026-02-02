@@ -9,7 +9,8 @@ from backend.src.presentation.schemas.auth import (
 )
 from backend.src.application.services.auth_service import AuthService
 
-from backend.src.presentation.dependencies import verify_token_security, get_user_repo
+from fastapi.security import OAuth2PasswordBearer
+from backend.src.presentation.dependencies import verify_token_security, get_user_repo, oauth2_scheme
 
 from backend.src.presentation.api.dependencies import get_auth_service
 
@@ -145,3 +146,20 @@ async def change_password(
     user_id = uuid.UUID(token.get("sub"))
     result = await service.change_password(user_id, data)
     return {"status": "success", "message": result.message}
+
+
+@router.post("/logout", operation_id="logout_user")
+async def logout_user(
+    token: str = Depends(oauth2_scheme), # دریافت توکن خام
+    service: AuthService = Depends(get_auth_service)
+):
+    """
+    خروج امن: توکن فعلی را در لیست سیاه (Redis) قرار می‌دهد
+    تا دیگر قابل استفاده نباشد.
+    """
+    # ابتدا توکن را اعتبارسنجی می‌کنیم تا مطمئن شویم جعلی نیست
+    # (اگر نامعتبر باشد خود verify_token_security خطا می‌دهد، اما ما اینجا برای Blacklist کردن به رشته خام نیاز داریم)
+    # بنابراین مستقیم به سرویس پاس می‌دهیم.
+    
+    await service.logout(token)
+    return {"status": "success", "message": "Logged out successfully"}
