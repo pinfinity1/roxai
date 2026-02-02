@@ -1,7 +1,7 @@
 import uuid
 import secrets
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta , timezone
 from typing import Optional
 
 from fastapi import HTTPException, status, Depends
@@ -23,7 +23,7 @@ from backend.src.presentation.schemas.auth import (
 )
 from backend.src.application.dtos.service_result import ServiceResult
 
-SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SUPER_SECRET_KEY_CHANGE_THIS")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -144,7 +144,6 @@ class AuthService:
     async def login_user(self, data: LoginRequest) -> TokenResponse:
         identifier = data.identifier
         
-        # Rate Limiting for Login
         is_allowed = await self.redis.check_rate_limit(f"login:{identifier}", limit=5, window_seconds=60)
         if not is_allowed:
              raise HTTPException(
@@ -160,6 +159,19 @@ class AuthService:
 
         if not user or not user.hashed_password:
             raise HTTPException(status_code=400, detail="نام کاربری یا رمز عبور اشتباه است")
+        
+        
+        if user.deleted_at is not None:
+            raise HTTPException(
+                status_code=400, 
+                detail="حساب کاربری شما حذف شده است."
+            )
+        
+        if not user.is_active:
+            raise HTTPException(
+                status_code=403, 
+                detail="حساب کاربری شما مسدود شده است. لطفا با پشتیبانی تماس بگیرید."
+            )
 
         if not self.pwd_context.verify(data.password, user.hashed_password):
             raise HTTPException(status_code=400, detail="نام کاربری یا رمز عبور اشتباه است")
@@ -222,7 +234,7 @@ class AuthService:
             exp = payload.get("exp")
             
             if jti and exp:
-                current_time = datetime.utcnow().timestamp()
+                current_time = datetime.now(timezone.utc).timestamp()
                 ttl = int(exp - current_time)
                 
                 if ttl > 0:
@@ -237,7 +249,7 @@ class AuthService:
     async def _create_tokens(self, user: User) -> TokenResponse:
         # 1. Access Token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        expire = datetime.utcnow() + access_token_expires
+        expire = datetime.now(timezone.utc) + access_token_expires
         jti = str(uuid.uuid4())
         
         to_encode = {
@@ -297,6 +309,9 @@ class AuthService:
             if client_id:
                 id_info = google_id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
                 return id_info
-        except Exception:
-             # تست برای محیط توسعه
-             return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}
+        except Exception as e:
+            if os.getenv("ENV_MODE") == "production":
+                raise HTTPException(status_code=400, detail="Google token validation failed")
+            
+            print(f"⚠️ Google Auth Failed (Dev Mode Fallback): {e}")
+            return {"email": "test@gmail.com", "given_name": "Test", "family_name": "User"}

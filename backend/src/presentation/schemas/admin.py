@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from backend.src.domain.entities.user import UserRole
 
@@ -48,3 +48,66 @@ class PaginatedUserResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class UserStatusChangeRequest(BaseModel):
+    target_user_id: UUID
+    is_active: bool = Field(..., description="True to activate/unban, False to ban/block")
+    reason_note: str = Field(..., min_length=5, description="Mandatory audit note for status change")
+
+# --- Audit Log Viewer Schemas (جدید) ---
+class AuditLogResponseItem(BaseModel):
+    id: UUID
+    admin_id: UUID
+    target_user_id: Optional[UUID]
+    action: str
+    details: Dict[str, Any]
+    reason_note: Optional[str]
+    ip_address: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# --- System Telemetry Schemas (جدید) ---
+class SystemHealthResponse(BaseModel):
+    database_status: str
+    total_users: int
+    active_users_24h: int
+    pending_jobs_count: int
+    system_load: str
+
+# --- Role Management Schemas (جدید) ---
+class ChangeRoleRequest(BaseModel):
+    target_user_id: UUID
+    new_role: UserRole
+    reason_note: str = Field(..., min_length=5, description="Reason for promotion/demotion")
+
+
+
+class FeatureFlagUpdateRequest(BaseModel):
+    is_enabled: bool = Field(..., description="وضعیت کلی سوئیچ")
+    
+    target_users: List[UUID] = Field(
+        default=[], 
+        description="لیست شناسه کاربرانی که این ویژگی برایشان فعال است (Whitelisting)"
+    )
+    
+    target_roles: List[UserRole] = Field(
+        default=[], 
+        description="لیست نقش‌هایی که به این ویژگی دسترسی دارند"
+    )
+    
+    description: Optional[str] = Field(None, max_length=255)
+
+class FeatureFlagResponse(BaseModel):
+    id: UUID
+    key: str
+    description: Optional[str]
+    is_enabled: bool
+    target_users: List[UUID] 
+    target_roles: List[UserRole]
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

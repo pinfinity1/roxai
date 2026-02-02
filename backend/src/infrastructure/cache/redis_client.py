@@ -79,3 +79,37 @@ class RedisClient:
 
     async def close(self):
         await self.client.close()
+
+    async def get_feature_flag(self, key: str) -> Optional[dict]:
+        """دریافت وضعیت فیچر فلگ از کش"""
+        cache_key = f"roxai:flags:{key}"
+        data = await self.client.hgetall(cache_key)
+        if not data:
+            return None
+        
+        # تبدیل داده‌های Redis (که همگی رشته هستند) به تایپ اصلی
+        import json
+        return {
+            "is_enabled": data.get("is_enabled") == "1",
+            "target_users": json.loads(data.get("target_users", "[]")),
+            "target_roles": json.loads(data.get("target_roles", "[]"))
+        }
+
+    async def set_feature_flag(self, key: str, is_enabled: bool, users: list, roles: list):
+        """ذخیره یا آپدیت فیچر فلگ در کش"""
+        import json
+        cache_key = f"roxai:flags:{key}"
+        mapping = {
+            "is_enabled": "1" if is_enabled else "0",
+            "target_users": json.dumps(users),
+            "target_roles": json.dumps(roles)
+        }
+        await self.client.hset(cache_key, mapping=mapping)
+        # زمان انقضا طولانی (مثلا ۱ ساعت) چون تغییرات کم است
+        # اما در زمان آپدیت از سمت ادمین، باید دستی این کلید را آپدیت کنیم
+        await self.client.expire(cache_key, 3600)
+        
+    async def delete_feature_flag_cache(self, key: str):
+        """برای وقتی که ادمین تغییری می‌دهد تا کش پاک شود"""
+        cache_key = f"roxai:flags:{key}"
+        await self.client.delete(cache_key)

@@ -15,7 +15,7 @@ from backend.src.infrastructure.cache.redis_client import RedisClient
 from backend.src.infrastructure.db.setup import engine, get_db
 from backend.src.infrastructure.db.models import Base 
 from backend.src.infrastructure.db.models.user import UserModel 
-from backend.src.infrastructure.repositories.postgres_user_repo import PostgresUserRepository
+from src.infrastructure.repositories.user import SqlAlchemyUserRepository
 from backend.src.infrastructure.external.sms import ConsoleSmsService, RemoteSmsService
 from backend.src.infrastructure.external.email import ConsoleEmailService, SmtpEmailService
 
@@ -53,7 +53,7 @@ async def get_auth_service_impl(db: AsyncSession = Depends(get_db)):
         raise RuntimeError("Redis client is not initialized")
     
 
-    real_user_repo = PostgresUserRepository(session=db)
+    real_user_repo = SqlAlchemyUserRepository(session=db)
     
     env_mode = os.getenv("ENV_MODE", "development")
     

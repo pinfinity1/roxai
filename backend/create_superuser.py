@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from pwdlib import PasswordHash
 
 from backend.src.infrastructure.db.setup import engine
-from backend.src.infrastructure.repositories.postgres_user_repo import PostgresUserRepository
+from src.infrastructure.repositories.user import SqlAlchemyUserRepository
 from backend.src.domain.entities.user import User, UserRole
 
 async def create_super_admin():
@@ -29,7 +29,7 @@ async def create_super_admin():
     )
 
     async with async_session_factory() as session:
-        repo = PostgresUserRepository(session)
+        repo = SqlAlchemyUserRepository(session)
         pwd_context = PasswordHash.recommended()
         
         print(f"🔍 Checking for: {email}")

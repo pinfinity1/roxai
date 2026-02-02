@@ -21,10 +21,11 @@ load_dotenv(os.path.join(backend_dir, ".env"))
 
 # 3. ایمپورت کردن مدل‌ها
 from backend.src.infrastructure.db.models.base import Base
-from backend.src.infrastructure.db.models.user import UserModel  # noqa
+from backend.src.infrastructure.db.models.user import UserModel  
+from backend.src.infrastructure.db.models.audit import AdminAuditLogModel 
+from backend.src.infrastructure.db.models.feature import FeatureFlagModel 
 
 # 4. ساخت هوشمند URL دیتابیس (رفع مشکل ${} در فایل .env)
-# ما مقادیر خام را می‌خوانیم و خودمان URL را می‌سازیم
 user = os.getenv("POSTGRES_USER", "postgres")
 password = os.getenv("POSTGRES_PASSWORD", "postgres")
 db = os.getenv("POSTGRES_DB", "roxai_db")

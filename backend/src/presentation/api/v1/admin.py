@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime, timedelta , timezone
+from typing import Optional , List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, desc
@@ -9,28 +9,38 @@ import math
 
 # Dependencies
 from backend.src.presentation.dependencies import (
+    get_redis_dependency,
     require_admin, 
     require_super_admin, 
     get_current_admin_id
 )
+from src.infrastructure.cache.redis_client import RedisClient
 
 # DB Setup
 from backend.src.infrastructure.db.setup import get_db
 from backend.src.infrastructure.db.models.audit import AdminAuditLogModel
 from backend.src.infrastructure.db.models.user import UserModel
+from backend.src.infrastructure.db.models.feature import FeatureFlagModel
 from backend.src.domain.entities.user import UserRole
+
 
 # Auth Config
 from backend.src.application.services.auth_service import SECRET_KEY, ALGORITHM
 
 # Schemas
 from backend.src.presentation.schemas.admin import (
+    ChangeRoleRequest,
     CreditAdjustmentRequest, 
     ImpersonateRequest, 
     ImpersonateResponse,
     PaginatedUserResponse,
-    AdminUserListItem
+    UserStatusChangeRequest,  
+    AuditLogResponseItem,     
+    SystemHealthResponse,
+    FeatureFlagUpdateRequest, 
+    FeatureFlagResponse,
 )
+
 
 router = APIRouter(prefix="/admin", tags=["Admin Console"])
 
@@ -43,45 +53,44 @@ async def list_users(
     role: Optional[UserRole] = Query(None, description="Filter by user role"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    دریافت لیست کاربران با قابلیت جستجو و فیلتر.
-    """
     
-    # 1. ساخت کوئری پایه
+
     sql_query = select(UserModel)
 
-    # 2. اعمال فیلتر جستجو (Search)
     if query:
-        search_term = f"%{query}%"
+
+        clean_query = query.strip()
+        search_term = f"%{clean_query}%"
+        
+        full_name_concat = func.concat(UserModel.first_name, ' ', UserModel.last_name)
+
         filters = [
             UserModel.email.ilike(search_term),
             UserModel.mobile.ilike(search_term),
+            full_name_concat.ilike(search_term),
             UserModel.first_name.ilike(search_term),
             UserModel.last_name.ilike(search_term)
         ]
         
         try:
-            uuid_obj = uuid.UUID(query)
+            uuid_obj = uuid.UUID(clean_query)
             filters.append(UserModel.id == uuid_obj)
         except ValueError:
             pass
             
         sql_query = sql_query.where(or_(*filters))
 
-    # 3. اعمال فیلتر نقش (Role)
     if role:
         sql_query = sql_query.where(UserModel.role == role)
 
-    # 4. محاسبه تعداد کل (Count)
+
     count_query = select(func.count()).select_from(sql_query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
 
-    # 5. اعمال ترتیب و صفحه‌بندی
     sql_query = sql_query.order_by(desc(UserModel.created_at))
     sql_query = sql_query.offset((page - 1) * page_size).limit(page_size)
 
-    # 6. اجرای نهایی
     result = await db.execute(sql_query)
     users = result.scalars().all()
 
@@ -102,28 +111,27 @@ async def adjust_user_credit(
     db: AsyncSession = Depends(get_db),
     admin_id: str = Depends(get_current_admin_id)
 ):
-    # ✅ FIX 1: ابتدا کاربر را پیدا می‌کنیم
+
     target_user = await db.get(UserModel, data.target_user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ✅ FIX 2: اعمال تغییر روی موجودی واقعی کاربر
+
     target_user.credit += data.amount
     
-    # ثبت لاگ امنیتی
+
     audit_log = AdminAuditLogModel(
         admin_id=uuid.UUID(admin_id),
         target_user_id=data.target_user_id,
         action="CREDIT_ADJUSTMENT",
         details={
             "amount": data.amount,
-            "new_balance": target_user.credit # ثبت موجودی جدید در لاگ برای اطمینان
+            "new_balance": target_user.credit 
         },
         reason_note=data.reason_note
     )
     
     db.add(audit_log)
-    # چون target_user را از سشن گرفتیم و تغییر دادیم، با commit تغییراتش ذخیره می‌شود
     await db.commit()
     
     return {"status": "success", "message": "Credit adjusted and audit log created.", "new_balance": target_user.credit}
@@ -140,12 +148,11 @@ async def impersonate_user(
     تولید یک توکن موقت برای ورود به حساب کاربر بدون نیاز به پسورد.
     """
     
-    # ✅ FIX 3: بررسی وجود کاربر و گرفتن نقش واقعی او
     target_user = await db.get(UserModel, data.target_user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found")
 
-    # ثبت لاگ
+
     audit_log = AdminAuditLogModel(
         admin_id=uuid.UUID(admin_id),
         target_user_id=data.target_user_id,
@@ -156,8 +163,7 @@ async def impersonate_user(
     db.add(audit_log)
     await db.commit()
 
-    # تولید توکن
-    expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     
     to_encode = {
         "sub": str(data.target_user_id),
@@ -174,3 +180,261 @@ async def impersonate_user(
         impersonation_token=encoded_jwt,
         redirect_url=f"/dashboard?impersonate_token={encoded_jwt}"
     )
+
+@router.patch("/users/status", dependencies=[Depends(require_super_admin)], operation_id="change_user_status")
+async def change_user_status(
+    data: UserStatusChangeRequest,
+    db: AsyncSession = Depends(get_db),
+    admin_id: str = Depends(get_current_admin_id)
+):
+    """
+    تغییر وضعیت فعال/غیرفعال بودن کاربر (Ban/Unban).
+    امنیت: ادمین نمی‌تواند خودش را بن کند (Self-Lockout Prevention).
+    """
+    if str(data.target_user_id) == admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Operation rejected: You cannot ban yourself."
+        )
+
+
+    target_user = await db.get(UserModel, data.target_user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if data.is_active and target_user.deleted_at is not None:
+        target_user.deleted_at = None
+
+    previous_status = target_user.is_active
+    target_user.is_active = data.is_active
+    
+    action_type = "USER_UNBAN" if data.is_active else "USER_BAN"
+    audit_log = AdminAuditLogModel(
+        admin_id=uuid.UUID(admin_id),
+        target_user_id=data.target_user_id,
+        action=action_type,
+        details={
+            "previous_status": previous_status,
+            "new_status": data.is_active,
+            "undeleted": target_user.deleted_at is None
+        },
+        reason_note=data.reason_note
+    )
+    
+    db.add(audit_log)
+    await db.commit()
+    
+    return {"status": "success", "message": f"User status changed to {data.is_active}"}
+
+
+@router.get("/users/{user_id}/audit-logs", response_model=List[AuditLogResponseItem], dependencies=[Depends(require_admin)], operation_id="get_user_audit_logs")
+async def get_user_audit_logs(
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    دریافت تاریخچه کامل تغییرات اعمال شده روی یک کاربر توسط ادمین‌ها.
+    """
+    try:
+        target_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    query = select(AdminAuditLogModel)\
+        .where(AdminAuditLogModel.target_user_id == target_uuid)\
+        .order_by(desc(AdminAuditLogModel.created_at))
+    
+    result = await db.execute(query)
+    logs = result.scalars().all()
+    
+    return logs
+
+
+@router.get("/telemetry/health", response_model=SystemHealthResponse, dependencies=[Depends(require_admin)], operation_id="get_system_health")
+async def get_system_health(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    داشبورد وضعیت سیستم: تعداد کاربران، کاربران فعال ۲۴ ساعت گذشته و وضعیت دیتابیس.
+    """
+    count_query = select(func.count()).select_from(UserModel)
+    total_result = await db.execute(count_query)
+    total_users = total_result.scalar_one()
+
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    active_query = select(func.count()).select_from(UserModel).where(UserModel.last_login_at >= yesterday)
+    active_result = await db.execute(active_query)
+    active_users = active_result.scalar_one()
+
+    mock_pending_jobs = 0 
+    
+    return SystemHealthResponse(
+        database_status="healthy", 
+        total_users=total_users,
+        active_users_24h=active_users,
+        pending_jobs_count=mock_pending_jobs,
+        system_load="normal"
+    )
+
+
+# --- Endpoint 6: Change User Role (Promotion/Demotion) ---
+@router.patch("/users/role", dependencies=[Depends(require_super_admin)], operation_id="change_user_role")
+async def change_user_role(
+    data: ChangeRoleRequest,
+    db: AsyncSession = Depends(get_db),
+    admin_id: str = Depends(get_current_admin_id)
+):
+    """
+    تغییر سطح دسترسی کاربر (مثلاً ارتقا به پشتیبان یا مدیر).
+    فقط سوپر ادمین می‌تواند این کار را انجام دهد.
+    """
+    # 1. Self-Lockout Prevention
+    if str(data.target_user_id) == admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Operation rejected: You cannot change your own role."
+        )
+
+    # 2. Fetch User
+    target_user = await db.get(UserModel, data.target_user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 3. Apply Role Change
+    previous_role = target_user.role
+    target_user.role = data.new_role
+    
+    # 4. Mandatory Audit Log
+    audit_log = AdminAuditLogModel(
+        admin_id=uuid.UUID(admin_id),
+        target_user_id=data.target_user_id,
+        action="ROLE_CHANGE",
+        details={
+            "previous_role": previous_role.value,
+            "new_role": data.new_role.value
+        },
+        reason_note=data.reason_note
+    )
+    
+    db.add(audit_log)
+    await db.commit()
+    
+    return {
+        "status": "success", 
+        "message": f"User role changed from {previous_role.value} to {data.new_role.value}"
+    }
+
+
+# --- Endpoint 7: Soft Delete User ---
+@router.delete("/users/{user_id}", dependencies=[Depends(require_super_admin)], operation_id="soft_delete_user")
+async def soft_delete_user(
+    user_id: str,
+    reason: str = Query(..., min_length=3, description="Audit reason for deletion"),
+    db: AsyncSession = Depends(get_db),
+    admin_id: str = Depends(get_current_admin_id)
+):
+    """
+    حذف نرم کاربر (Soft Delete).
+    رکورد از دیتابیس پاک نمی‌شود، بلکه فیلد deleted_at مقداردهی می‌شود.
+    کاربر پس از این عملیات دیگر نمی‌تواند لاگین کند.
+    """
+    if user_id == admin_id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself.")
+
+    try:
+        target_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID")
+
+    target_user = await db.get(UserModel, target_uuid)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target_user.deleted_at:
+        raise HTTPException(status_code=400, detail="User is already deleted.")
+
+    # Soft Delete Action
+    target_user.deleted_at = datetime.now(timezone.utc)
+    target_user.is_active = False 
+    
+    # Audit Log
+    audit_log = AdminAuditLogModel(
+        admin_id=uuid.UUID(admin_id),
+        target_user_id=target_uuid,
+        action="USER_SOFT_DELETE",
+        details={"deleted_at": str(target_user.deleted_at)},
+        reason_note=reason
+    )
+    
+    db.add(audit_log)
+    await db.commit()
+    
+    return {"status": "success", "message": "User soft-deleted successfully."}
+
+
+@router.put(
+    "/feature-flags/{key}", 
+    response_model=FeatureFlagResponse, 
+    dependencies=[Depends(require_super_admin)], 
+    operation_id="update_feature_flag" 
+)
+async def update_feature_flag(
+    key: str,
+    data: FeatureFlagUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: RedisClient = Depends(get_redis_dependency), 
+    admin_id: str = Depends(get_current_admin_id)
+):
+    """
+    ایجاد یا بروزرسانی یک Feature Flag.
+    هم دیتابیس را آپدیت می‌کند و هم کش Redis را Invalidate می‌کند.
+    """
+    # 1. یافتن یا ایجاد رکورد
+    result = await db.execute(select(FeatureFlagModel).where(FeatureFlagModel.key == key))
+    flag = result.scalars().first()
+    
+    # متغیر برای نگه داشتن وضعیت قبلی (برای لاگ)
+    old_status = False
+    old_users_count = 0
+    
+    if not flag:
+        flag = FeatureFlagModel(key=key)
+        db.add(flag)
+    else:
+        # ✅ ذخیره وضعیت قبل از تغییر
+        old_status = flag.is_enabled
+        old_users_count = len(flag.target_users)
+    
+    # 2. بروزرسانی فیلدها
+    flag.is_enabled = data.is_enabled
+    flag.target_users = [str(uid) for uid in data.target_users] 
+    flag.target_roles = [role.value for role in data.target_roles]
+    flag.description = data.description
+    
+    # 3. ثبت Audit Log با جزئیات دقیق
+    audit_log = AdminAuditLogModel(
+        admin_id=uuid.UUID(admin_id),
+        action="FEATURE_FLAG_UPDATE",
+        details={
+            "key": key,
+            "old_status": old_status, # ✅ وضعیت قدیم
+            "new_status": data.is_enabled, # ✅ وضعیت جدید
+            "target_roles": flag.target_roles,
+            "users_count_change": f"{old_users_count} -> {len(flag.target_users)}"
+        },
+        reason_note=f"Update feature flag {key}"
+    )
+    db.add(audit_log)
+    
+    await db.commit()
+    await db.refresh(flag)
+    
+    # 4. آپدیت کش
+    await redis.set_feature_flag(
+        key=flag.key,
+        is_enabled=flag.is_enabled,
+        users=flag.target_users,
+        roles=flag.target_roles
+    )
+    
+    return flag
