@@ -107,7 +107,7 @@
   4.  **Top-Ups:** Users running out of credits mid-month can purchase one-time credit packs without changing their plan.
   5.  **Plan Downgrade/Expiry:** Upon subscription expiry, the user reverts to the "Free" tier limits and features.
 - **TechStack:**
-  - **Backend:** FastAPI, PostgreSQL (Users Table: `plan_id`, `subscription_expires_at`).
+  - **Backend:** FastAPI, PostgreSQL.
   - **Scheduling:** Temporal Cron (for monthly resets).
   - **Payment:** ZarinPal / Zibal.
 - **Constraints:**
@@ -212,7 +212,7 @@
 
 - **FeatureName:** High-Performance Marketing Front
 - **ProductContext:** Roxai Public Website
-- **Description:** The public-facing entry point of the platform. Its primary goal is conversion (Visitor -> Sign-up). It utilizes advanced rendering techniques (SSG/ISR) to ensure instant loading and SEO dominance. It showcases the product's capabilities via interactive demos, pricing tables, and localized content (Persian) to build trust.
+- **Description:** The public-facing entry point of the platform. Its primary goal is conversion. It utilizes advanced rendering techniques (SSG/ISR) to ensure instant loading and SEO dominance. It showcases the product's capabilities via interactive demos, pricing tables, and localized content (Persian) to build trust.
 - **TargetUsers:** Anonymous Visitors, Potential Leads.
 - **MainUseCases:**
   1.  **Value Proposition Display:** clearly communicating the "pain killer" features (AI Presentation Generator) with high-quality localized copy and assets.
@@ -221,7 +221,7 @@
   4.  **SEO & Schema Integration:** Automatic generation of JSON-LD structured data and meta tags to ensure high ranking for relevant Persian keywords.
   5.  **Onboarding Handoff:** Seamless redirection to the main application (Authentication flow) preserving the user's initial input (e.g., the topic they typed in the hero section).
 - **TechStack:**
-  - **Frontend:** Next.js 15 (App Router - Public Group), Framer Motion (Animations).
+  - **Frontend:** Next.js 15.
   - **Rendering:** Incremental Static Regeneration (ISR) for blog/content pages.
 - **Constraints:**
   - **Performance:** Largest Contentful Paint (LCP) must be under 1.2s.

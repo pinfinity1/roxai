@@ -24,6 +24,8 @@ from backend.src.infrastructure.db.models.base import Base
 from backend.src.infrastructure.db.models.user import UserModel  
 from backend.src.infrastructure.db.models.audit import AdminAuditLogModel 
 from backend.src.infrastructure.db.models.feature import FeatureFlagModel 
+from backend.src.infrastructure.db.models.folder import FolderModel
+from backend.src.infrastructure.db.models.project import ProjectModel
 
 # 4. ساخت هوشمند URL دیتابیس (رفع مشکل ${} در فایل .env)
 user = os.getenv("POSTGRES_USER", "postgres")

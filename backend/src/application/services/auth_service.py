@@ -276,7 +276,8 @@ class AuthService:
             first_name=user.first_name,
             last_name=user.last_name,
             avatar_url=user.avatar_url,
-            role=user.role.value
+            role=user.role.value,
+            credit=user.credit
         )
         
         return TokenResponse(

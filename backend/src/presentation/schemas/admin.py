@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from backend.src.domain.entities.user import UserRole
+from src.domain.entities.project import ProjectStatus
 
 # --- Shared Schemas (موجود) ---
 class AdminUserFilter(BaseModel):
@@ -111,3 +112,24 @@ class FeatureFlagResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+
+class AdminProjectListItem(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    status: ProjectStatus
+    created_at: datetime
+    updated_at: datetime
+    user_email_or_mobile: Optional[str] = None # برای اینکه بدانیم مال چه کسی است
+
+    class Config:
+        from_attributes = True
+
+class PaginatedProjectResponse(BaseModel):
+    items: List[AdminProjectListItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

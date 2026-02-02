@@ -9,6 +9,7 @@ import uvicorn
 # --- Imports: Domain & Application ---
 from backend.src.presentation.api.v1 import auth, admin
 from backend.src.application.services.auth_service import AuthService
+from backend.src.presentation.api.v1 import projects
 
 # --- Imports: Infrastructure ---
 from backend.src.infrastructure.cache.redis_client import RedisClient
@@ -18,6 +19,7 @@ from backend.src.infrastructure.db.models.user import UserModel
 from src.infrastructure.repositories.user import SqlAlchemyUserRepository
 from backend.src.infrastructure.external.sms import ConsoleSmsService, RemoteSmsService
 from backend.src.infrastructure.external.email import ConsoleEmailService, SmtpEmailService
+from backend.src.presentation.api.v1 import folders
 
 # --- Global State ---
 redis_client: Optional[RedisClient] = None
@@ -95,6 +97,8 @@ app.add_middleware(
 # --- Register Routers ---
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(projects.router, prefix="/api/v1")
+app.include_router(folders.router, prefix="/api/v1")
 
 # --- Dependency Overrides ---
 app.dependency_overrides[auth.get_auth_service] = get_auth_service_impl

@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, status, HTTPException
 from backend.src.presentation.schemas.auth import (
     IdentifyRequest, IdentifyResponse, 
@@ -6,6 +7,8 @@ from backend.src.presentation.schemas.auth import (
     GoogleLoginRequest, RefreshTokenRequest
 )
 from backend.src.application.services.auth_service import AuthService
+
+from backend.src.presentation.dependencies import verify_token_security, get_user_repo
 
 from backend.src.presentation.api.dependencies import get_auth_service
 
@@ -100,3 +103,16 @@ async def refresh_token(
 ):
     """تمدید نشست کاربری با استفاده از رفرش توکن"""
     return await service.refresh_access_token(data)
+
+
+@router.get("/me/credit", response_model=int, operation_id="get_my_credit")
+async def get_my_credit(
+    token: dict = Depends(verify_token_security),
+    user_repo = Depends(get_user_repo)
+):
+    """دریافت موجودی اعتبار فعلی کاربر (برای آپدیت UI)"""
+    user_id = uuid.UUID(token.get("sub"))
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user.credit

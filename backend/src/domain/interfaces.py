@@ -1,6 +1,7 @@
-from typing import Protocol, Optional
+from typing import Protocol, Optional , List, Tuple
 import uuid
 from backend.src.domain.entities.user import User
+from backend.src.domain.entities.project import Project, ProjectStatus
 
 class IUserRepository(Protocol):
     async def get_by_email(self, email: str) -> Optional[User]: ...
@@ -15,3 +16,17 @@ class ISmsService(Protocol):
 class IEmailService(Protocol):
     async def send_otp(self, email: str, code: str) -> bool: ...
 
+class IProjectRepository(Protocol):
+    async def get_by_id(self, project_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Project]: ...
+    async def get_all_by_user(
+        self, 
+        user_id: uuid.UUID, 
+        page: int, 
+        page_size: int,
+        search: Optional[str] = None,       
+        status: Optional[ProjectStatus] = None 
+    ) -> Tuple[List[Project], int]: ...
+
+    async def create(self, project: Project) -> Project: ...
+    async def update(self, project: Project) -> Project: ...
+    async def duplicate(self, project_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Project]: ...

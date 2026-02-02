@@ -33,6 +33,7 @@ class UserShortInfo(BaseModel):
     last_name: Optional[str] = None
     avatar_url: Optional[str] = None
     role: str
+    credit: int = 0
 
 # --- OTP Flow ---
 class SendOtpRequest(BaseModel):

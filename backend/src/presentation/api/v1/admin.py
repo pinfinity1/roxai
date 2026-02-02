@@ -21,6 +21,7 @@ from backend.src.infrastructure.db.setup import get_db
 from backend.src.infrastructure.db.models.audit import AdminAuditLogModel
 from backend.src.infrastructure.db.models.user import UserModel
 from backend.src.infrastructure.db.models.feature import FeatureFlagModel
+from backend.src.infrastructure.db.models.project import ProjectModel
 from backend.src.domain.entities.user import UserRole
 
 
@@ -39,6 +40,8 @@ from backend.src.presentation.schemas.admin import (
     SystemHealthResponse,
     FeatureFlagUpdateRequest, 
     FeatureFlagResponse,
+    PaginatedProjectResponse,
+    AdminProjectListItem
 )
 
 
@@ -438,3 +441,101 @@ async def update_feature_flag(
     )
     
     return flag
+
+
+
+@router.get("/projects", response_model=PaginatedProjectResponse, dependencies=[Depends(require_admin)], operation_id="admin_list_projects")
+async def list_all_projects(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user_id: Optional[str] = Query(None, description="Filter by User ID"),
+    status: Optional[str] = Query(None, description="Filter by Project Status"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    مشاهده تمام پروژه‌های سیستم با قابلیت فیلتر بر اساس کاربر یا وضعیت.
+    مناسب برای پشتیبانی و نظارت.
+    """
+    # 1. Base Query (Join with User to show owner info)
+    query = select(ProjectModel, UserModel).join(UserModel, ProjectModel.user_id == UserModel.id)
+
+    # 2. Filters
+    if user_id:
+        try:
+            uid = uuid.UUID(user_id)
+            query = query.where(ProjectModel.user_id == uid)
+        except ValueError:
+            pass
+            
+    if status:
+        query = query.where(ProjectModel.status == status)
+
+    # 3. Count
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+
+    # 4. Fetch
+    query = query.order_by(desc(ProjectModel.created_at))
+    query = query.offset((page - 1) * page_size).limit(page_size)
+    
+    result = await db.execute(query)
+    rows = result.all() # Returns list of (ProjectModel, UserModel) tuples
+
+    # 5. Map to Schema
+    items = []
+    for proj, usr in rows:
+        identifier = usr.email if usr.email else usr.mobile
+        item = AdminProjectListItem(
+            id=proj.id,
+            user_id=proj.user_id,
+            title=proj.title,
+            status=proj.status,
+            created_at=proj.created_at,
+            updated_at=proj.updated_at,
+            user_email_or_mobile=identifier
+        )
+        items.append(item)
+
+    total_pages = math.ceil(total / page_size) if page_size > 0 else 0
+
+    return PaginatedProjectResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
+
+# --- Endpoint: Delete Project (Admin) ---
+@router.delete("/projects/{project_id}", dependencies=[Depends(require_super_admin)], operation_id="admin_delete_project")
+async def admin_delete_project(
+    project_id: str,
+    reason: str = Query(..., min_length=3),
+    db: AsyncSession = Depends(get_db),
+    admin_id: str = Depends(get_current_admin_id)
+):
+    """
+    حذف اجباری پروژه توسط ادمین (مثلاً محوای نامناسب).
+    """
+    pid = uuid.UUID(project_id)
+    project = await db.get(ProjectModel, pid)
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Soft Delete
+    project.deleted_at = datetime.now(timezone.utc)
+    
+    # Audit Log
+    audit = AdminAuditLogModel(
+        admin_id=uuid.UUID(admin_id),
+        target_user_id=project.user_id,
+        action="PROJECT_FORCE_DELETE",
+        details={"project_title": project.title, "project_id": str(pid)},
+        reason_note=reason
+    )
+    db.add(audit)
+    
+    await db.commit()
+    return {"status": "success", "message": "Project deleted by admin"}
