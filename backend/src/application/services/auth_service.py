@@ -102,7 +102,7 @@ class AuthService:
         
         return "OTP sent successfully"
 
-    async def verify_otp(self, identifier: str, code: str) -> str:
+    async def verify_otp(self, identifier: str, code: str) -> dict:
         if "@" not in identifier:
             identifier = self._normalize_mobile(identifier)
 
@@ -111,11 +111,40 @@ class AuthService:
         if not cached_code or cached_code != code:
             raise HTTPException(status_code=400, detail="کد وارد شده نامعتبر یا منقضی شده است.")
 
-        verification_token = str(uuid.uuid4())
-        await self.redis.save_verification_token(verification_token, identifier)
         await self.redis.delete_otp(identifier)
 
-        return verification_token
+        user = None
+        if "@" in identifier:
+            user = await self.user_repo.get_by_email(identifier)
+        else:
+            user = await self.user_repo.get_by_mobile(identifier)
+
+        if user:
+            if not user.is_active:
+                raise HTTPException(status_code=403, detail="حساب کاربری مسدود است.")
+            
+            token_resp = await self._create_tokens(user)
+            
+            return {
+                "action": "login",
+                "message": "ورود با موفقیت انجام شد.",
+                "access_token": token_resp.access_token,
+                "refresh_token": token_resp.refresh_token,
+                "expires_in": token_resp.expires_in,
+                "user": token_resp.user
+            }
+
+        # --- سناریوی ب: کاربر وجود ندارد -> هدایت به ثبت‌نام ---
+        else:
+            # تولید توکن موقت برای مرحله بعدی (Register)
+            verification_token = str(uuid.uuid4())
+            await self.redis.save_verification_token(verification_token, identifier)
+            
+            return {
+                "action": "register",
+                "message": "کد تایید شد. لطفا اطلاعات ثبت‌نام را تکمیل کنید.",
+                "verification_token": verification_token
+            }
 
     async def register_user(self, data: RegisterRequest):
         identifier = await self.redis.get_identifier_by_token(data.verification_token)

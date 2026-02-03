@@ -1,4 +1,15 @@
 import os
+import sys
+from dotenv import load_dotenv
+
+# ✅ CRITICAL FIX: Load environment variables BEFORE importing other project modules
+# This ensures that when auth_service is imported, SECRET_KEY is available.
+load_dotenv("backend/.env")
+
+# Optional: Fail fast if keys are missing
+if not os.getenv("SECRET_KEY"):
+    print("⚠️  CRITICAL WARNING: SECRET_KEY is not set in environment!")
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -7,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import uvicorn
 
 # --- Imports: Domain & Application ---
+# Now it is safe to import these, because env vars are loaded
 from backend.src.presentation.api.v1 import auth, admin
 from backend.src.application.services.auth_service import AuthService
 from backend.src.presentation.api.v1 import projects
@@ -57,7 +69,7 @@ async def get_auth_service_impl(db: AsyncSession = Depends(get_db)):
 
     real_user_repo = SqlAlchemyUserRepository(session=db)
     
-    env_mode = os.getenv("ENV_MODE", "development")
+    env_mode = os.getenv("ENV_MODE")
     
     if env_mode == "production":
         api_key = os.getenv("SMS_PROVIDER_API_KEY", "")

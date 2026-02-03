@@ -4,8 +4,20 @@
  * Roxai API
  * OpenAPI spec version: 1.0.0
  */
+import type { VerifyOtpResponseAction } from './verifyOtpResponseAction';
+import type { VerifyOtpResponseVerificationToken } from './verifyOtpResponseVerificationToken';
+import type { VerifyOtpResponseAccessToken } from './verifyOtpResponseAccessToken';
+import type { VerifyOtpResponseRefreshToken } from './verifyOtpResponseRefreshToken';
+import type { VerifyOtpResponseExpiresIn } from './verifyOtpResponseExpiresIn';
+import type { VerifyOtpResponseUser } from './verifyOtpResponseUser';
 
 export interface VerifyOtpResponse {
-  verification_token: string;
-  message?: string;
+  /** Action to take next */
+  action: VerifyOtpResponseAction;
+  message: string;
+  verification_token?: VerifyOtpResponseVerificationToken;
+  access_token?: VerifyOtpResponseAccessToken;
+  refresh_token?: VerifyOtpResponseRefreshToken;
+  expires_in?: VerifyOtpResponseExpiresIn;
+  user?: VerifyOtpResponseUser;
 }

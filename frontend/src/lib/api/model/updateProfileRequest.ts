@@ -7,13 +7,9 @@
 import type { UpdateProfileRequestFirstName } from './updateProfileRequestFirstName';
 import type { UpdateProfileRequestLastName } from './updateProfileRequestLastName';
 import type { UpdateProfileRequestAvatarUrl } from './updateProfileRequestAvatarUrl';
-import type { UpdateProfileRequestEmail } from './updateProfileRequestEmail';
-import type { UpdateProfileRequestMobile } from './updateProfileRequestMobile';
 
 export interface UpdateProfileRequest {
   first_name?: UpdateProfileRequestFirstName;
   last_name?: UpdateProfileRequestLastName;
   avatar_url?: UpdateProfileRequestAvatarUrl;
-  email?: UpdateProfileRequestEmail;
-  mobile?: UpdateProfileRequestMobile;
 }

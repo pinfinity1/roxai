@@ -12,8 +12,11 @@ from backend.src.infrastructure.external.email import ConsoleEmailService
 from backend.src.application.services.auth_service import AuthService, SECRET_KEY, ALGORITHM
 from backend.src.domain.entities.user import UserRole
 
-async def get_redis_dependency() -> RedisClient:
-    return RedisClient()
+async def get_redis_client() -> RedisClient:
+    return RedisClient.get_instance()
+
+get_redis_dependency = get_redis_client
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -21,7 +24,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 async def verify_token_security(
     token: str = Depends(oauth2_scheme), 
-    redis: RedisClient = Depends(get_redis_dependency)
+    redis: RedisClient = Depends(get_redis_client)
 ) -> dict:
     """تابع کمکی برای بررسی امضا و بلک‌لیست توکن"""
     try:
@@ -47,7 +50,7 @@ async def verify_token_security(
 
 async def get_current_user_role(
     token: str = Depends(oauth2_scheme),
-    redis: RedisClient = Depends(get_redis_dependency) 
+    redis: RedisClient = Depends(get_redis_client) 
 ) -> str:
     """استخراج نقش کاربر با چک کردن بلک‌لیست"""
     payload = await verify_token_security(token, redis)
@@ -59,7 +62,7 @@ async def get_current_user_role(
 
 async def get_current_admin_id(
     token: str = Depends(oauth2_scheme),
-    redis: RedisClient = Depends(get_redis_dependency)
+    redis: RedisClient = Depends(get_redis_client)
 ) -> str:
     """استخراج ID ادمین با چک کردن بلک‌لیست"""
     payload = await verify_token_security(token, redis)
@@ -84,10 +87,6 @@ async def require_super_admin(role: str = Depends(get_current_user_role)):
         )
     return True
 
-# --- Dependency Injection Functions ---
-
-async def get_redis_client() -> RedisClient:
-    return RedisClient()
 
 async def get_user_repo(db: AsyncSession = Depends(get_db)) -> SqlAlchemyUserRepository:
     return SqlAlchemyUserRepository(db)

@@ -48,8 +48,7 @@ async def verify_otp(
     service: AuthService = Depends(get_auth_service)
 ):
     """بررسی کد تایید و دریافت توکن ثبت‌نام"""
-    token = await service.verify_otp(data.identifier, data.code)
-    return VerifyOtpResponse(verification_token=token)
+    return await service.verify_otp(data.identifier, data.code)
 
 @router.post(
     "/register", 

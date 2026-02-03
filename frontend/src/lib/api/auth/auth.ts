@@ -25,6 +25,7 @@ import type {
 
 import type {
   ChangePasswordRequest,
+  ConfirmIdentifierChange,
   GoogleLoginRequest,
   HTTPValidationError,
   IdentifyRequest,
@@ -32,6 +33,7 @@ import type {
   LoginRequest,
   RefreshTokenRequest,
   RegisterRequest,
+  RequestIdentifierChange,
   SendOtpRequest,
   TokenResponse,
   UpdateProfileRequest,
@@ -656,6 +658,136 @@ export const useUpdateMyProfile = <TError = ErrorType<HTTPValidationError>,
       > => {
 
       const mutationOptions = getUpdateMyProfileMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * درخواست تغییر موبایل یا ایمیل (ارسال OTP به مقصد جدید)
+ * @summary Request Identifier Change
+ */
+export const requestIdentifierChange = (
+    requestIdentifierChange: RequestIdentifierChange,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/auth/me/identifier/request`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: requestIdentifierChange, signal
+    },
+      options);
+    }
+  
+
+
+export const getRequestIdentifierChangeMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestIdentifierChange>>, TError,{data: RequestIdentifierChange}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestIdentifierChange>>, TError,{data: RequestIdentifierChange}, TContext> => {
+
+const mutationKey = ['requestIdentifierChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestIdentifierChange>>, {data: RequestIdentifierChange}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestIdentifierChange(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestIdentifierChangeMutationResult = NonNullable<Awaited<ReturnType<typeof requestIdentifierChange>>>
+    export type RequestIdentifierChangeMutationBody = RequestIdentifierChange
+    export type RequestIdentifierChangeMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Request Identifier Change
+ */
+export const useRequestIdentifierChange = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestIdentifierChange>>, TError,{data: RequestIdentifierChange}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof requestIdentifierChange>>,
+        TError,
+        {data: RequestIdentifierChange},
+        TContext
+      > => {
+
+      const mutationOptions = getRequestIdentifierChangeMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * تایید نهایی تغییر موبایل یا ایمیل
+ * @summary Confirm Identifier Change
+ */
+export const confirmIdentifierChange = (
+    confirmIdentifierChange: ConfirmIdentifierChange,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/auth/me/identifier/confirm`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: confirmIdentifierChange, signal
+    },
+      options);
+    }
+  
+
+
+export const getConfirmIdentifierChangeMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmIdentifierChange>>, TError,{data: ConfirmIdentifierChange}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmIdentifierChange>>, TError,{data: ConfirmIdentifierChange}, TContext> => {
+
+const mutationKey = ['confirmIdentifierChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmIdentifierChange>>, {data: ConfirmIdentifierChange}> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmIdentifierChange(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmIdentifierChangeMutationResult = NonNullable<Awaited<ReturnType<typeof confirmIdentifierChange>>>
+    export type ConfirmIdentifierChangeMutationBody = ConfirmIdentifierChange
+    export type ConfirmIdentifierChangeMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Confirm Identifier Change
+ */
+export const useConfirmIdentifierChange = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmIdentifierChange>>, TError,{data: ConfirmIdentifierChange}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof confirmIdentifierChange>>,
+        TError,
+        {data: ConfirmIdentifierChange},
+        TContext
+      > => {
+
+      const mutationOptions = getConfirmIdentifierChangeMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

@@ -41,8 +41,15 @@ class VerifyOtpRequest(BaseModel):
     code: str = Field(..., min_length=4, max_length=6)
 
 class VerifyOtpResponse(BaseModel):
-    verification_token: str
-    message: str = "OTP verified successfully. Proceed to registration."
+    action: Literal["login", "register"] = Field(..., description="Action to take next")
+    message: str
+    
+    verification_token: Optional[str] = None
+    
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    expires_in: Optional[int] = None
+    user: Optional[UserShortInfo] = None
 
 class RegisterRequest(BaseModel):
     verification_token: str = Field(..., description="Token received from verify-otp endpoint")

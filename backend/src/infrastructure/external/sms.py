@@ -1,5 +1,6 @@
+# backend/src/infrastructure/external/sms.py
+import sys
 from backend.src.domain.interfaces import ISmsService
-import os
 
 class ConsoleSmsService(ISmsService):
     """
@@ -7,28 +8,23 @@ class ConsoleSmsService(ISmsService):
     پیامک را به جای ارسال واقعی، در کنسول چاپ می‌کند.
     """
     async def send_otp(self, mobile: str, code: str) -> bool:
-        print(f"📨 [SMS DEV] To: {mobile} | Code: {code}")
+        # چاپ بنر واضح برای دیده شدن راحت در لاگ‌های شلوغ
+        print("\n" + "="*50, file=sys.stdout)
+        print(f"📱 [SMS MOCK] To:   {mobile}", file=sys.stdout)
+        print(f"🔑 [OTP CODE] Code: {code}", file=sys.stdout)
+        print("="*50 + "\n", file=sys.stdout, flush=True) # ✅ flush=True خیلی مهم است
         return True
 
 class RemoteSmsService(ISmsService):
-    """
-    مخصوص محیط پروداکشن:
-    این کلاس اسکلت‌بندی اتصال به پنل پیامک واقعی است.
-    شما بعداً می‌توانید کد HTTP Request مربوط به هر شرکتی را اینجا بنویسید.
-    """
     def __init__(self, api_key: str, sender_number: str = ""):
         self.api_key = api_key
         self.sender_number = sender_number
 
     async def send_otp(self, mobile: str, code: str) -> bool:
         try:
-            # ---------------------------------------------------------
-            # TODO: اینجا کد اتصال به API سرویس‌دهنده پیامک خود را بنویسید
-            # مثال سودوکد (Pseudo-code):
-            # response = httpx.post(url, json={'to': mobile, 'msg': code})
-            # ---------------------------------------------------------
-            print(f"🚀 [REAL SMS] Sending code {code} to {mobile} via Provider...")
+            # TODO: Implement real provider
+            print(f"🚀 [REAL SMS] Sending code {code} to {mobile}...", flush=True)
             return True
         except Exception as e:
-            print(f"❌ SMS Failed: {e}")
+            print(f"❌ SMS Failed: {e}", flush=True)
             return False
