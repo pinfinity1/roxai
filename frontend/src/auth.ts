@@ -4,10 +4,13 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { loginUser, loginWithGoogle, refreshToken } from "@/lib/api/auth/auth";
 import { JWT } from "next-auth/jwt";
+import { AxiosError } from "axios";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    if (!token.refreshToken) throw new Error("No Refresh Token Available");
+    if (!token.refreshToken) {
+      return { ...token, error: "RefreshAccessTokenError" };
+    }
 
     const response = await refreshToken({
       refresh_token: token.refreshToken as string,
@@ -17,11 +20,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       ...token,
       accessToken: response.access_token,
       refreshToken: response.refresh_token,
-      expiresAt: Date.now() + response.expires_in * 1000,
+      expiresAt: Date.now() + (response.expires_in || 3600) * 1000,
       role: response.role,
+      error: undefined,
     };
   } catch (error) {
-    console.error("RefreshAccessTokenError", error);
     return { ...token, error: "RefreshAccessTokenError" };
   }
 }
@@ -53,7 +56,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (credentials?.token && credentials?.user_json) {
             const user = JSON.parse(credentials.user_json as string);
             const tokenResponse = JSON.parse(credentials.token as string);
-
             return {
               id: user.id,
               name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
@@ -111,7 +113,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const response = await loginWithGoogle({
             id_token: account.id_token as string,
           });
-
           return {
             ...token,
             accessToken: response.access_token,
@@ -134,10 +135,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return await refreshAccessToken(token);
     },
-
     async session({ session, token }) {
       if (token.accessToken) {
         session.accessToken = token.accessToken as string;
+        session.refreshToken = token.refreshToken as string;
         session.user.role = token.role as string;
         session.user.id = token.id as string;
         session.user.image = token.picture;

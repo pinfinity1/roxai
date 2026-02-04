@@ -24,4 +24,8 @@ query?: string | null;
  * Filter by user role
  */
 role?: UserRole | null;
+/**
+ * Filter by account status (Active/Banned)
+ */
+is_active?: boolean | null;
 };

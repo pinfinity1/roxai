@@ -34,6 +34,7 @@ class AdminUserListItem(BaseModel):
     mobile: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    avatar_url: Optional[str] = None
     role: UserRole
     credit: int = Field(default=0, description="Current wallet balance")
     is_active: bool
@@ -69,6 +70,13 @@ class AuditLogResponseItem(BaseModel):
     
     class Config:
         from_attributes = True
+
+class PaginatedAuditLogResponse(BaseModel):
+    items: List[AuditLogResponseItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 # --- System Telemetry Schemas (جدید) ---
 class SystemHealthResponse(BaseModel):

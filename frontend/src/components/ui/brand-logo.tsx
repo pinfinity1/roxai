@@ -27,7 +27,7 @@ export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
     <motion.div
       dir="ltr"
       className={cn(
-        "font-black tracking-tighter select-none flex items-baseline font-sans relative cursor-default group",
+        "font-black tracking-tighter select-none flex items-baseline font-sans relative cursor-default group pt-3 pb-2",
         config.text,
         className,
       )}
@@ -38,7 +38,7 @@ export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
       {/* بخش اول: Roxa */}
       <span
         className={cn(
-          "bg-clip-text text-transparent bg-gradient-to-b pb-2", // pb-2 برای جلوگیری از کلیپ شدن
+          "bg-clip-text text-transparent bg-gradient-to-b", // pb-2 برای جلوگیری از کلیپ شدن
           textGradient,
         )}
       >
@@ -68,7 +68,7 @@ export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
         {/* بدنه حرف i */}
         <span
           className={cn(
-            "bg-clip-text text-transparent bg-gradient-to-b pb-2", // pb-2 اضافه شد
+            "bg-clip-text text-transparent bg-gradient-to-b", // pb-2 اضافه شد
             textGradient,
           )}
         >

@@ -26,15 +26,16 @@ import type {
 import type {
   AdminDeleteProjectParams,
   AdminListProjectsParams,
-  AuditLogResponseItem,
   ChangeRoleRequest,
   CreditAdjustmentRequest,
   FeatureFlagResponse,
   FeatureFlagUpdateRequest,
+  GetUserAuditLogsParams,
   HTTPValidationError,
   ImpersonateRequest,
   ImpersonateResponse,
   ListUsersParams,
+  PaginatedAuditLogResponse,
   PaginatedProjectResponse,
   PaginatedUserResponse,
   SoftDeleteUserParams,
@@ -143,6 +144,7 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
 
 /**
+ * Adjusts user wallet balance safely using atomic updates.
  * @summary Adjust User Credit
  */
 export const adjustUserCredit = (
@@ -207,7 +209,6 @@ export const useAdjustUserCredit = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * تولید یک توکن موقت برای ورود به حساب کاربر بدون نیاز به پسورد.
  * @summary Impersonate User
  */
 export const impersonateUser = (
@@ -272,8 +273,6 @@ export const useImpersonateUser = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * تغییر وضعیت فعال/غیرفعال بودن کاربر (Ban/Unban).
-امنیت: ادمین نمی‌تواند خودش را بن کند (Self-Lockout Prevention).
  * @summary Change User Status
  */
 export const changeUserStatus = (
@@ -337,17 +336,18 @@ export const useChangeUserStatus = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * دریافت تاریخچه کامل تغییرات اعمال شده روی یک کاربر توسط ادمین‌ها.
  * @summary Get User Audit Logs
  */
 export const getUserAuditLogs = (
     userId: string,
+    params?: GetUserAuditLogsParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
       
       
-      return customInstance<AuditLogResponseItem[]>(
-      {url: `/api/v1/admin/users/${userId}/audit-logs`, method: 'GET', signal
+      return customInstance<PaginatedAuditLogResponse>(
+      {url: `/api/v1/admin/users/${userId}/audit-logs`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -355,23 +355,25 @@ export const getUserAuditLogs = (
 
 
 
-export const getGetUserAuditLogsQueryKey = (userId?: string,) => {
+export const getGetUserAuditLogsQueryKey = (userId?: string,
+    params?: GetUserAuditLogsParams,) => {
     return [
-    `/api/v1/admin/users/${userId}/audit-logs`
+    `/api/v1/admin/users/${userId}/audit-logs`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getGetUserAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetUserAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(userId: string,
+    params?: GetUserAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUserAuditLogsQueryKey(userId);
+  const queryKey =  queryOptions?.queryKey ?? getGetUserAuditLogsQueryKey(userId,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAuditLogs>>> = ({ signal }) => getUserAuditLogs(userId, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAuditLogs>>> = ({ signal }) => getUserAuditLogs(userId,params, requestOptions, signal);
 
       
 
@@ -385,7 +387,8 @@ export type GetUserAuditLogsQueryError = ErrorType<HTTPValidationError>
 
 
 export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
- userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
+ userId: string,
+    params: undefined |  GetUserAuditLogsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUserAuditLogs>>,
           TError,
@@ -395,7 +398,8 @@ export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAud
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
- userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
+ userId: string,
+    params?: GetUserAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUserAuditLogs>>,
           TError,
@@ -405,7 +409,8 @@ export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAud
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
- userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ userId: string,
+    params?: GetUserAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -413,11 +418,12 @@ export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAud
  */
 
 export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAuditLogs>>, TError = ErrorType<HTTPValidationError>>(
- userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ userId: string,
+    params?: GetUserAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAuditLogs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetUserAuditLogsQueryOptions(userId,options)
+  const queryOptions = getGetUserAuditLogsQueryOptions(userId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -429,7 +435,6 @@ export function useGetUserAuditLogs<TData = Awaited<ReturnType<typeof getUserAud
 
 
 /**
- * داشبورد وضعیت سیستم: تعداد کاربران، کاربران فعال ۲۴ ساعت گذشته و وضعیت دیتابیس.
  * @summary Get System Health
  */
 export const getSystemHealth = (
@@ -521,8 +526,6 @@ export function useGetSystemHealth<TData = Awaited<ReturnType<typeof getSystemHe
 
 
 /**
- * تغییر سطح دسترسی کاربر (مثلاً ارتقا به پشتیبان یا مدیر).
-فقط سوپر ادمین می‌تواند این کار را انجام دهد.
  * @summary Change User Role
  */
 export const changeUserRole = (
@@ -586,9 +589,6 @@ export const useChangeUserRole = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * حذف نرم کاربر (Soft Delete).
-رکورد از دیتابیس پاک نمی‌شود، بلکه فیلد deleted_at مقداردهی می‌شود.
-کاربر پس از این عملیات دیگر نمی‌تواند لاگین کند.
  * @summary Soft Delete User
  */
 export const softDeleteUser = (
@@ -652,8 +652,6 @@ export const useSoftDeleteUser = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * ایجاد یا بروزرسانی یک Feature Flag.
-هم دیتابیس را آپدیت می‌کند و هم کش Redis را Invalidate می‌کند.
  * @summary Update Feature Flag
  */
 export const updateFeatureFlag = (
@@ -718,8 +716,6 @@ export const useUpdateFeatureFlag = <TError = ErrorType<HTTPValidationError>,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * مشاهده تمام پروژه‌های سیستم با قابلیت فیلتر بر اساس کاربر یا وضعیت.
-مناسب برای پشتیبانی و نظارت.
  * @summary List All Projects
  */
 export const adminListProjects = (
@@ -812,7 +808,6 @@ export function useAdminListProjects<TData = Awaited<ReturnType<typeof adminList
 
 
 /**
- * حذف اجباری پروژه توسط ادمین (مثلاً محوای نامناسب).
  * @summary Admin Delete Project
  */
 export const adminDeleteProject = (

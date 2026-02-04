@@ -8,6 +8,7 @@ import type { AdminUserListItemEmail } from './adminUserListItemEmail';
 import type { AdminUserListItemMobile } from './adminUserListItemMobile';
 import type { AdminUserListItemFirstName } from './adminUserListItemFirstName';
 import type { AdminUserListItemLastName } from './adminUserListItemLastName';
+import type { AdminUserListItemAvatarUrl } from './adminUserListItemAvatarUrl';
 import type { UserRole } from './userRole';
 
 export interface AdminUserListItem {
@@ -16,6 +17,7 @@ export interface AdminUserListItem {
   mobile?: AdminUserListItemMobile;
   first_name?: AdminUserListItemFirstName;
   last_name?: AdminUserListItemLastName;
+  avatar_url?: AdminUserListItemAvatarUrl;
   role: UserRole;
   /** Current wallet balance */
   credit?: number;

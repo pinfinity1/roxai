@@ -1,3 +1,3 @@
 export default function Home() {
-  return <main>home page</main>;
+  return <main>Roxai home page</main>;
 }

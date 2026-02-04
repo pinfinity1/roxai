@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Vazirmatn, Inter } from "next/font/google";
 import "./globals.css";
-import Providers from "@/lib/providers";
+import { RootProvider } from "@/components/providers/root-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const vazir = Vazirmatn({
   subsets: ["arabic"],
@@ -30,7 +31,10 @@ export default function RootLayout({
       <body
         className={`${vazir.variable} ${inter.variable} font-sans antialiased`}
       >
-        <Providers>{children}</Providers>
+        <RootProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </RootProvider>
       </body>
     </html>
   );

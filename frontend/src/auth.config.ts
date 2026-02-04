@@ -37,7 +37,7 @@ export const authConfig = {
       if (isOnAdmin) {
         if (!isLoggedIn) return false;
         if (userRole !== "admin" && userRole !== "support") {
-          return Response.redirect(new URL("/dashboard", nextUrl));
+          return Response.redirect(new URL("/admin", nextUrl));
         }
         return true;
       }

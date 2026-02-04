@@ -238,30 +238,30 @@ class AuthService:
 
 
     async def refresh_access_token(self, data: RefreshTokenRequest) -> TokenResponse:
-        # 1. جستجو در ردیس
         user_id_str = await self.redis.get_user_id_by_refresh_token(data.refresh_token)
         
         if not user_id_str:
+            print(f"❌ Refresh Failed: Token '{data.refresh_token[:10]}...' not found in Redis.")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="نشست کاربری نامعتبر یا منقضی شده است."
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="نشست کاربری منقضی شده است (Token Not Found in Cache)."
             )
 
-        # 2. دریافت کاربر از دیتابیس
         try:
             user_id = uuid.UUID(user_id_str)
             user = await self.user_repo.get_by_id(user_id)
         except ValueError:
-             raise HTTPException(status_code=401, detail="اطلاعات کاربر مخدوش است.")
+            raise HTTPException(status_code=401, detail="Invalid User ID format in cache.")
 
         if not user or not user.is_active:
-             raise HTTPException(status_code=401, detail="کاربر یافت نشد یا غیرفعال شده است.")
+            print(f"❌ Refresh Failed: User {user_id} not found or inactive.")
+            raise HTTPException(status_code=401, detail="User account is inactive or deleted.")
 
-        # 3. چرخش توکن (Token Rotation) - امنیتی
-        # توکن قبلی را می‌سوزانیم
-        await self.redis.delete_refresh_token(data.refresh_token)
+
+        await self.redis.delete_refresh_token(data.refresh_token, grace_period=5)
         
-        # 4. تولید توکن‌های جدید
+        print(f"✅ Token Rotated for User {user.id}")
+
         return await self._create_tokens(user)
 
     async def logout(self, token: str):

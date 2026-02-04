@@ -61,9 +61,12 @@ class RedisClient:
         key = f"roxai:auth:rt:{token}"
         return await self.client.get(key)
     
-    async def delete_refresh_token(self, token: str):
+    async def delete_refresh_token(self, token: str, grace_period: int = 0):
         key = f"roxai:auth:rt:{token}"
-        await self.client.delete(key)
+        if grace_period > 0:
+            await self.client.expire(key, grace_period)
+        else:
+            await self.client.delete(key)
 
     async def add_to_blacklist(self, jti: str, ttl_seconds: int):
         key = f"roxai:auth:bl:{jti}"
