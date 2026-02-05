@@ -33,7 +33,11 @@ export default function RootLayout({
       >
         <RootProvider>
           {children}
-          <Toaster richColors position="top-center" />
+          <Toaster
+            richColors
+            position="top-center"
+            toastOptions={{ style: { fontFamily: vazir.style.fontFamily } }}
+          />
         </RootProvider>
       </body>
     </html>
