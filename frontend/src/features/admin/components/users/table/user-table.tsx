@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Ghost } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,8 +14,7 @@ import {
 import { AdminUserListItem } from "@/lib/api/model";
 import { UserTableActions } from "./user-table-actions";
 import { useRouter } from "next/navigation";
-import { CreditAdjustDialog } from "../dialogs/credit-adjust-dialog"; // ✅ New
-import { ImpersonateDialog } from "../dialogs/impersonate-dialog"; // ✅ New
+import Link from "next/link";
 
 interface UserTableProps {
   data: AdminUserListItem[];
@@ -49,10 +48,8 @@ export function UserTable({ data, isLoading }: UserTableProps) {
             <TableHead className="w-[250px] text-right">کاربر</TableHead>
             <TableHead className="text-right">نقش</TableHead>
             <TableHead className="text-right">وضعیت</TableHead>
-            <TableHead className="text-left font-mono">
-              اعتبار (تومان)
-            </TableHead>
-            <TableHead className="text-center w-[150px]">دسترسی سریع</TableHead>
+            <TableHead className="text-left font-mono">اعتبار</TableHead>
+            <TableHead className="text-center">دسترسی سریع</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -90,36 +87,17 @@ export function UserTable({ data, isLoading }: UserTableProps) {
                 {user.credit?.toLocaleString() ?? 0}
               </TableCell>
 
-              {/* ✅ استفاده از کامپوننت‌های جدید */}
-              <TableCell>
-                <div className="flex items-center justify-center gap-1">
-                  <CreditAdjustDialog
-                    userId={user.id}
-                    onSuccess={() => router.refresh()}
-                    trigger={
-                      <Button
-                        size="icon-xs"
-                        variant="outline"
-                        className="h-8 w-8 text-emerald-600 border-emerald-200"
-                      >
-                        <Wallet className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-
-                  <ImpersonateDialog
-                    userId={user.id}
-                    trigger={
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        className="h-8 w-8 text-gray-400 hover:text-orange-600"
-                      >
-                        <Ghost className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                </div>
+              <TableCell className="text-center">
+                <Link href={`/admin/users/${user.id}`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="مشاهده جزئیات و مدیریت"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </Link>
               </TableCell>
 
               <TableCell>

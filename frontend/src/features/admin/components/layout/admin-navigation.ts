@@ -32,15 +32,17 @@ export const adminSidebarItems: NavItem[] = [
     title: "پروژه‌ها",
     href: "/admin/projects",
     icon: FolderOpen,
+    disabled: true,
   },
   {
     title: "ویژگی‌ها (Feature Flags)",
     href: "/admin/features",
     icon: Flag,
+    disabled: true,
   },
   {
     title: "امور مالی",
-    href: "/admin/billing", // این روت هنوز وجود ندارد اما در منو باشد بهتر است
+    href: "/admin/billing",
     icon: CreditCard,
     disabled: true,
   },

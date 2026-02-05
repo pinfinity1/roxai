@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AdminUserListItem } from "@/lib/api/model";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +15,6 @@ import {
   Shield,
   Wallet,
   Ghost,
-  Ban,
-  CheckCircle,
-  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +22,7 @@ import { toast } from "sonner";
 import { ImpersonateDialog } from "../dialogs/impersonate-dialog";
 import { UserStatusDialog } from "../dialogs/user-status-dialog";
 import { CreditAdjustDialog } from "../dialogs/credit-adjust-dialog";
+import { RoleChangeDialog } from "../dialogs/role-change-dialog";
 
 interface UserProfileSidebarProps {
   user: AdminUserListItem;
@@ -34,6 +33,9 @@ export function UserProfileSidebar({
   user,
   onRefresh,
 }: UserProfileSidebarProps) {
+  // ✅ استیت برای کنترل دیالوگ تغییر نقش
+  const [isRoleDialogOpen, setRoleDialogOpen] = useState(false);
+
   const copyToClipboard = (text: any, label: string = "") => {
     if (!text) return;
     navigator.clipboard.writeText(String(text));
@@ -42,10 +44,9 @@ export function UserProfileSidebar({
 
   return (
     <Card className="overflow-hidden border-border shadow-sm">
-      {/* 1. Minimal Header (No Gradient) */}
+      {/* 1. Minimal Header */}
       <div className="flex flex-col items-center pt-8 pb-6 bg-slate-50/50">
         <Avatar className="h-24 w-24 border-4 border-white shadow-sm mb-4">
-          {/* استفاده از any برای رفع ارور موقت */}
           <AvatarImage src={(user as any).avatar_url || ""} />
           <AvatarFallback className="text-3xl font-light bg-slate-200 text-slate-600">
             {(user.first_name?.[0] || user.email?.[0] || "U").toUpperCase()}
@@ -79,9 +80,12 @@ export function UserProfileSidebar({
           >
             {user.is_active ? "Active" : "Banned"}
           </Badge>
+          {/* ✅ بج نقش هم می‌تواند قابل کلیک باشد */}
           <Badge
             variant="secondary"
-            className="uppercase text-[10px] tracking-wider font-bold"
+            className="uppercase text-[10px] tracking-wider font-bold cursor-pointer hover:bg-slate-200 transition-colors"
+            onClick={() => setRoleDialogOpen(true)}
+            title="تغییر نقش"
           >
             {user.role}
           </Badge>
@@ -91,7 +95,7 @@ export function UserProfileSidebar({
       <Separator />
 
       <CardContent className="space-y-5 pt-6">
-        {/* Contact Info - Clean List */}
+        {/* Contact Info */}
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -136,7 +140,7 @@ export function UserProfileSidebar({
           </div>
         </div>
 
-        {/* Credit Box - Minimal */}
+        {/* Credit Box */}
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-600">
             <Wallet className="w-4 h-4" />
@@ -150,6 +154,7 @@ export function UserProfileSidebar({
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 pt-2 pb-6">
+        {/* 1. Impersonate Button (Primary Action) */}
         <ImpersonateDialog
           userId={user.id}
           trigger={
@@ -163,6 +168,17 @@ export function UserProfileSidebar({
           }
         />
 
+        {/* 2. ✅ Role Change Button (Added Here) */}
+        <Button
+          variant="outline"
+          className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+          onClick={() => setRoleDialogOpen(true)}
+        >
+          <Shield className="w-4 h-4 ml-2" />
+          تغییر نقش کاربری
+        </Button>
+
+        {/* 3. Secondary Actions Grid */}
         <div className="grid grid-cols-2 gap-3 w-full">
           <CreditAdjustDialog
             userId={user.id}
@@ -194,6 +210,15 @@ export function UserProfileSidebar({
             }
           />
         </div>
+
+        {/* ✅ Controlled Dialog Component */}
+        <RoleChangeDialog
+          userId={user.id}
+          currentRole={user.role}
+          open={isRoleDialogOpen}
+          onOpenChange={setRoleDialogOpen}
+          onSuccess={onRefresh}
+        />
       </CardFooter>
     </Card>
   );
