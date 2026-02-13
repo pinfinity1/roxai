@@ -3,7 +3,7 @@ import { AuthWizard } from "@/features/auth/components/auth-wizard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ورود | Roxai",
+  title: "Roxai",
 };
 
 export default function LoginPage() {

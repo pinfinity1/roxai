@@ -29,7 +29,7 @@ export const authConfig = {
       // @ts-ignore
       const userRole = auth?.user?.role;
 
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
+      const isOnDashboard = nextUrl.pathname.startsWith("/");
       const isOnAdmin = nextUrl.pathname.startsWith("/admin");
       const isOnAuth = nextUrl.pathname === "/login";
 
@@ -53,7 +53,7 @@ export const authConfig = {
         if (userRole === "admin" || userRole === "support") {
           return Response.redirect(new URL("/admin", nextUrl));
         }
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(new URL("/", nextUrl));
       }
 
       return true;

@@ -66,7 +66,7 @@ export function StepOtp({ identifier, onBack, onSuccess }: StepOtpProps) {
           user_json: JSON.stringify(res.user),
           redirect: false,
         });
-        router.push("/dashboard");
+        router.push("/");
         router.refresh();
       } else if (res.verification_token) {
         onSuccess(res.verification_token);

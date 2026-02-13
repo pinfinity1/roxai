@@ -36,6 +36,6 @@ tree -I "node_modules|venv|**pycache**|.git|.next|.mypy_cache|dist|build|postgre
 
 npx repomix --include "backend/**,docker-compose.yml,pytest.ini,docs/**,\*.md"
 
-npx repomix --include "frontend/**,docs/**,\*.md,docker-compose.yml"
+npx repomix --include "frontend/\*_/_,docs/rules.md,docs/design-guidlines.md,docker-compose.yml,backend-reference.json"
 
 npx repomix --include "frontend/**,backend/**,docs/\*_,_.md,docker-compose.yml"

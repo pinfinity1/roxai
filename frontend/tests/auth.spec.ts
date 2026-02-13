@@ -57,7 +57,7 @@ test.describe("Authentication Flow (Mocked API)", () => {
     await page.route("**/api/auth/callback/credentials*", async (route) => {
       await route.fulfill({
         status: 200,
-        body: JSON.stringify({ url: "http://localhost:3000/dashboard" }),
+        body: JSON.stringify({ url: "http://localhost:3000/" }),
       });
     });
 

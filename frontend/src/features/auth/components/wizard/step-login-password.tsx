@@ -50,7 +50,7 @@ export function StepLoginPassword({
       if (result?.error) {
         form.setError("password", { message: "رمز عبور اشتباه است" });
       } else {
-        router.push("/dashboard");
+        router.push("/");
         router.refresh();
       }
     } catch (error) {

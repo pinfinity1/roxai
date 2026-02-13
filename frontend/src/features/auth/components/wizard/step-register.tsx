@@ -55,7 +55,7 @@ export function StepRegister({
       });
 
       if (!result?.error) {
-        router.push("/dashboard");
+        router.push("/");
         router.refresh();
       }
     } catch {

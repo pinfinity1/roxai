@@ -4,7 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { loginUser, loginWithGoogle, refreshToken } from "@/lib/api/auth/auth";
 import { JWT } from "next-auth/jwt";
-import { AxiosError } from "axios";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {

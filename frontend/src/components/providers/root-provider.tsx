@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { useState } from "react";
 import { SessionGuard } from "./session-guard";
+import { TooltipProvider } from "../ui/tooltip";
 
 export function RootProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -20,7 +21,9 @@ export function RootProvider({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <SessionGuard>{children}</SessionGuard>
+        <TooltipProvider>
+          <SessionGuard>{children}</SessionGuard>
+        </TooltipProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
